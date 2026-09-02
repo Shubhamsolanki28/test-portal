@@ -1,14 +1,18 @@
-import mongoose from "mongoose";
+import pkg from 'pg';
+const { Pool } = pkg;
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/dexmy"
+});
 
-    console.log("MongoDB connected successfully");
-  } catch (error) {
-    console.error("MongoDB connection failed:", error.message);
-    process.exit(1);
-  }
-};
+pool.on('connect', () => {
+  console.log('PostgreSQL connected successfully');
+});
 
-export default connectDB;
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+export const query = (text, params) => pool.query(text, params);
+export default pool;
