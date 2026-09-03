@@ -10,11 +10,14 @@ import examRoutes from "./routes/examRoutes.js";
 import questionReportRoutes from "./routes/questionReportRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
 import testSubmissionRoutes from "./routes/testSubmissionRoutes.js";
+import swaggerUi from "swagger-ui-express";
+import { swaggerDocs } from "./swagger.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 connectDB();
 

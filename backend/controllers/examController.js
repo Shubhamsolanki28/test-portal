@@ -82,7 +82,15 @@ export const getExamById = async (req, res) => {
 export const updateExam = async (req, res) => {
   try {
     const { title, description, subject, duration, marksPerQuestion, negativeMarks } = req.body;
+    const userId = req.user?.id;
+
     if (!title || !duration) return res.status(400).json({ success: false, message: "Title and duration are required." });
+
+    const examCheck = await query(`SELECT * FROM exams WHERE id = $1`, [req.params.id]);
+    if (examCheck.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
+    if (String(examCheck.rows[0].created_by) !== String(userId) && req.user?.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Not authorized to update this exam" });
+    }
 
     const result = await query(
       `UPDATE exams SET title = $1, description = $2, subject = $3, duration = $4, marks_per_question = $5, negative_marks = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *`,
@@ -108,6 +116,13 @@ export const updateExam = async (req, res) => {
 // =====================================================
 export const deleteExam = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    const examCheck = await query(`SELECT * FROM exams WHERE id = $1`, [req.params.id]);
+    if (examCheck.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
+    if (String(examCheck.rows[0].created_by) !== String(userId) && req.user?.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Not authorized to delete this exam" });
+    }
+
     const result = await query(`DELETE FROM exams WHERE id = $1 RETURNING *`, [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
 

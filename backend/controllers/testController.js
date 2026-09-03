@@ -86,9 +86,16 @@ export const getTestById = async (req, res) => {
 export const updateTest = async (req, res) => {
   try {
     const { title, description, subject, duration, marksPerQuestion, negativeMarks } = req.body;
+    const userId = req.user?.id;
 
     if (!title || !duration) {
       return res.status(400).json({ success: false, message: "Title and duration are required." });
+    }
+
+    const testCheck = await query(`SELECT * FROM tests WHERE id = $1`, [req.params.id]);
+    if (testCheck.rows.length === 0) return res.status(404).json({ success: false, message: "Test not found" });
+    if (String(testCheck.rows[0].created_by) !== String(userId) && req.user?.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Not authorized to update this test" });
     }
 
     const result = await query(
@@ -123,6 +130,13 @@ export const updateTest = async (req, res) => {
 // =====================================================
 export const deleteTest = async (req, res) => {
   try {
+    const userId = req.user?.id;
+    const testCheck = await query(`SELECT * FROM tests WHERE id = $1`, [req.params.id]);
+    if (testCheck.rows.length === 0) return res.status(404).json({ success: false, message: "Test not found" });
+    if (String(testCheck.rows[0].created_by) !== String(userId) && req.user?.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Not authorized to delete this test" });
+    }
+
     const result = await query(`DELETE FROM tests WHERE id = $1 RETURNING *`, [req.params.id]);
 
     if (result.rows.length === 0) {

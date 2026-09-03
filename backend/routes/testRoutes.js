@@ -15,6 +15,28 @@ import {
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * /api/test-creation:
+ *   post:
+ *     summary: Create a new test
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               duration:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Test created
+ */
 router.post("/", authMiddleware, requireTestCreator, createTest);
 
 router.get("/", authMiddleware, requireTestCreator, getTests);
