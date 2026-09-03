@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 
 import connectDB from "./config/db.js";
-import Question from "./models/Question.js";
+
 import questionRoutes from "./routes/questionRoutes.js";
 import examRoutes from "./routes/examRoutes.js";
 import questionReportRoutes from "./routes/questionReportRoutes.js";
