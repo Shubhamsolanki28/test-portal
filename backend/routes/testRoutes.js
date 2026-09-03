@@ -1,4 +1,5 @@
 import express from "express";
+import authMiddleware, { requireTestCreator, requireStudent } from "../middleware/auth.js";
 
 import {
   createTest,
@@ -14,23 +15,23 @@ import {
 
 const router = express.Router();
 
-router.post("/", createTest);
+router.post("/", authMiddleware, requireTestCreator, createTest);
 
-router.get("/", getTests);
+router.get("/", authMiddleware, requireTestCreator, getTests);
 
-router.get("/published", getPublishedTests);
+router.get("/published", authMiddleware, requireStudent, getPublishedTests);
 
-router.get("/:id", getTestById);
+router.get("/:id", authMiddleware, getTestById);
 
-router.put("/:id", updateTest);
+router.put("/:id", authMiddleware, requireTestCreator, updateTest);
 
-router.delete("/:id", deleteTest);
+router.delete("/:id", authMiddleware, requireTestCreator, deleteTest);
 
-router.patch("/:id/publish", toggleTestPublish);
+router.patch("/:id/publish", authMiddleware, requireTestCreator, toggleTestPublish);
 
-router.post("/:id/questions", addQuestionToTest);
+router.post("/:id/questions", authMiddleware, requireTestCreator, addQuestionToTest);
 
-router.delete("/:id/questions", removeQuestionFromTest);
+router.delete("/:id/questions", authMiddleware, requireTestCreator, removeQuestionFromTest);
 
 
 

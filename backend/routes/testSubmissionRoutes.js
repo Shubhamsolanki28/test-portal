@@ -1,4 +1,5 @@
 import express from "express";
+import authMiddleware, { requireStudent } from "../middleware/auth.js";
 
 import {
   submitTest,
@@ -7,8 +8,8 @@ import {
 
 const router = express.Router();
 
-router.post("/", submitTest);
+router.post("/", authMiddleware, requireStudent, submitTest);
 
-router.get("/:id", getSubmissionById);
+router.get("/:id", authMiddleware, getSubmissionById);
 
 export default router;

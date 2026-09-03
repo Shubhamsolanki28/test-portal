@@ -1,4 +1,5 @@
 import express from "express";
+import authMiddleware, { requireTestCreator } from "../middleware/auth.js";
 
 import {
   createQuestion,
@@ -9,6 +10,9 @@ import {
 } from "../controllers/questionController.js";
 
 const router = express.Router();
+
+router.use(authMiddleware);
+router.use(requireTestCreator);
 
 router.post("/", createQuestion);
 
