@@ -1,277 +1,185 @@
-import Exam from "../models/Exam.js";
-import Question from "../models/Question.js";
+import { query } from "../config/db.js";
 
-// Create Exam
+// =====================================================
+// CREATE EXAM
+// =====================================================
 export const createExam = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      duration,
-      marksPerQuestion,
-      negativeMarks,
-      subject,
-    } = req.body;
+    const { title, description, subject, duration, marksPerQuestion, negativeMarks } = req.body;
+    const createdBy = req.user?.id || null;
 
     if (!title || !duration) {
-      return res.status(400).json({
-        success: false,
-        message: "Title and duration are required.",
-      });
+      return res.status(400).json({ success: false, message: "Title and duration are required." });
     }
 
-    const exam = await Exam.create({
-      title,
-      description,
-      duration,
-      marksPerQuestion,
-      negativeMarks,
-      subject,
-      totalQuestions: 0,
-      questions: [],
-      isPublished: false,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Exam created successfully",
-      exam,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create exam",
-      error: error.message,
-    });
-  }
-};
-
-
-// Get All Exams
-export const getExams = async (req, res) => {
-  try {
-    const exams = await Exam.find()
-      .populate("questions")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: exams.length,
-      exams,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch exams",
-      error: error.message,
-    });
-  }
-};
-
-
-// Get Single Exam
-export const getExamById = async (req, res) => {
-  try {
-    const exam = await Exam.findById(req.params.id).populate("questions");
-
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: "Exam not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      exam,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch exam",
-      error: error.message,
-    });
-  }
-};
-
-
-// Update Exam
-export const updateExam = async (req, res) => {
-  try {
-    const exam = await Exam.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true,
-      }
+    const result = await query(
+      `INSERT INTO exams (title, description, subject, duration, marks_per_question, negative_marks, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        title.trim(),
+        description || "",
+        subject || "General Awareness",
+        Number(duration),
+        marksPerQuestion !== undefined ? Number(marksPerQuestion) : 1,
+        negativeMarks !== undefined ? Number(negativeMarks) : 0,
+        createdBy
+      ]
     );
 
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: "Exam not found",
-      });
-    }
-
-    res.status(200).json({
+    return res.status(201).json({
       success: true,
-      message: "Exam updated successfully",
-      exam,
+      message: "Exam created successfully",
+      exam: result.rows[0],
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update exam",
-      error: error.message,
-    });
+    console.error("CREATE EXAM ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to create exam", error: error.message });
   }
 };
 
+// =====================================================
+// GET ALL EXAMS
+// =====================================================
+export const getExams = async (req, res) => {
+  try {
+    const result = await query(`SELECT * FROM exams ORDER BY created_at DESC`);
+    return res.status(200).json({ success: true, exams: result.rows, count: result.rows.length });
+  } catch (error) {
+    console.error("GET EXAMS ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch exams", error: error.message });
+  }
+};
 
-// Delete Exam
+// =====================================================
+// GET EXAM BY ID
+// =====================================================
+export const getExamById = async (req, res) => {
+  try {
+    const examResult = await query(`SELECT * FROM exams WHERE id = $1`, [req.params.id]);
+    
+    if (examResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Exam not found" });
+    }
+    
+    const exam = examResult.rows[0];
+    
+    const questionsResult = await query(
+      `SELECT q.* FROM test_questions_db q JOIN exam_questions eq ON q.id = eq.question_id WHERE eq.exam_id = $1`,
+      [req.params.id]
+    );
+    exam.questions = questionsResult.rows;
+
+    return res.status(200).json({ success: true, exam });
+  } catch (error) {
+    console.error("GET EXAM ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch exam", error: error.message });
+  }
+};
+
+// =====================================================
+// UPDATE EXAM
+// =====================================================
+export const updateExam = async (req, res) => {
+  try {
+    const { title, description, subject, duration, marksPerQuestion, negativeMarks } = req.body;
+    if (!title || !duration) return res.status(400).json({ success: false, message: "Title and duration are required." });
+
+    const result = await query(
+      `UPDATE exams SET title = $1, description = $2, subject = $3, duration = $4, marks_per_question = $5, negative_marks = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *`,
+      [
+        title.trim(), description || "", subject || "", Number(duration),
+        marksPerQuestion !== undefined ? Number(marksPerQuestion) : 1,
+        negativeMarks !== undefined ? Number(negativeMarks) : 0,
+        req.params.id
+      ]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
+
+    return res.status(200).json({ success: true, message: "Exam updated successfully", exam: result.rows[0] });
+  } catch (error) {
+    console.error("UPDATE EXAM ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update exam", error: error.message });
+  }
+};
+
+// =====================================================
+// DELETE EXAM
+// =====================================================
 export const deleteExam = async (req, res) => {
   try {
-    const exam = await Exam.findByIdAndDelete(req.params.id);
+    const result = await query(`DELETE FROM exams WHERE id = $1 RETURNING *`, [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
 
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: "Exam not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Exam deleted successfully",
-    });
+    return res.status(200).json({ success: true, message: "Exam deleted successfully" });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete exam",
-      error: error.message,
-    });
+    console.error("DELETE EXAM ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete exam", error: error.message });
   }
 };
 
+// =====================================================
+// PUBLISH / UNPUBLISH EXAM
+// =====================================================
+export const toggleExamPublish = async (req, res) => {
+  try {
+    const result = await query(`UPDATE exams SET is_published = NOT is_published, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`, [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
 
-// Add Question To Exam
+    const exam = result.rows[0];
+    return res.status(200).json({ success: true, message: exam.is_published ? "Exam published successfully" : "Exam unpublished successfully", exam });
+  } catch (error) {
+    console.error("TOGGLE EXAM PUBLISH ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update exam status", error: error.message });
+  }
+};
+
+// =====================================================
+// ADD QUESTION TO EXAM
+// =====================================================
 export const addQuestionToExam = async (req, res) => {
   try {
     const { questionId } = req.body;
+    if (!questionId) return res.status(400).json({ success: false, message: "Question ID is required" });
 
-    const exam = await Exam.findById(req.params.id);
+    await query(`INSERT INTO exam_questions (exam_id, question_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [req.params.id, questionId]);
+    await query(`UPDATE exams SET total_questions = (SELECT count(*) FROM exam_questions WHERE exam_id = $1) WHERE id = $1`, [req.params.id]);
 
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: "Exam not found",
-      });
-    }
+    const examResult = await query(`SELECT * FROM exams WHERE id = $1`, [req.params.id]);
+    if (examResult.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
 
-    const question = await Question.findById(questionId);
+    const exam = examResult.rows[0];
+    const questionsResult = await query(`SELECT q.* FROM test_questions_db q JOIN exam_questions eq ON q.id = eq.question_id WHERE eq.exam_id = $1`, [req.params.id]);
+    exam.questions = questionsResult.rows;
 
-    if (!question) {
-      return res.status(404).json({
-        success: false,
-        message: "Question not found",
-      });
-    }
-
-    // Duplicate question prevent karo
-    if (exam.questions.some((id) => id.toString() === questionId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Question already added to this exam.",
-      });
-    }
-
-    exam.questions.push(questionId);
-
-    exam.totalQuestions = exam.questions.length;
-
-    await exam.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Question added to exam successfully",
-      exam,
-    });
+    return res.status(200).json({ success: true, message: "Question added successfully", exam });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to add question to exam",
-      error: error.message,
-    });
+    console.error("ADD QUESTION TO EXAM ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to add question to exam", error: error.message });
   }
 };
 
-
-// Remove Question From Exam
+// =====================================================
+// REMOVE QUESTION FROM EXAM
+// =====================================================
 export const removeQuestionFromExam = async (req, res) => {
   try {
     const { questionId } = req.body;
+    if (!questionId) return res.status(400).json({ success: false, message: "Question ID is required" });
 
-    const exam = await Exam.findById(req.params.id);
+    await query(`DELETE FROM exam_questions WHERE exam_id = $1 AND question_id = $2`, [req.params.id, questionId]);
+    await query(`UPDATE exams SET total_questions = (SELECT count(*) FROM exam_questions WHERE exam_id = $1) WHERE id = $1`, [req.params.id]);
 
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: "Exam not found",
-      });
-    }
+    const examResult = await query(`SELECT * FROM exams WHERE id = $1`, [req.params.id]);
+    if (examResult.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
 
-    exam.questions = exam.questions.filter(
-      (id) => id.toString() !== questionId
-    );
+    const exam = examResult.rows[0];
+    const questionsResult = await query(`SELECT q.* FROM test_questions_db q JOIN exam_questions eq ON q.id = eq.question_id WHERE eq.exam_id = $1`, [req.params.id]);
+    exam.questions = questionsResult.rows;
 
-    exam.totalQuestions = exam.questions.length;
-
-    await exam.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Question removed from exam successfully",
-      exam,
-    });
+    return res.status(200).json({ success: true, message: "Question removed successfully", exam });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to remove question from exam",
-      error: error.message,
-    });
-  }
-};
-
-
-// Publish / Unpublish Exam
-export const toggleExamPublish = async (req, res) => {
-  try {
-    const exam = await Exam.findById(req.params.id);
-
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: "Exam not found",
-      });
-    }
-
-    exam.isPublished = !exam.isPublished;
-
-    await exam.save();
-
-    res.status(200).json({
-      success: true,
-      message: exam.isPublished
-        ? "Exam published successfully"
-        : "Exam unpublished successfully",
-      exam,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update exam status",
-      error: error.message,
-    });
+    console.error("REMOVE QUESTION FROM EXAM ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to remove question from exam", error: error.message });
   }
 };
