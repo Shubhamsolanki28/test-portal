@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TeacherLayout from "../components/TeacherLayout";
+import { fetchWithAuth } from "../src/api";
 
 function TestPreview() {
   const { testId } = useParams();
@@ -16,9 +17,10 @@ function TestPreview() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          `http://localhost:5000/api/test-creation/${testId}`
-        );
+        let response = await fetchWithAuth(`/api/tests/${testId}`);
+        if (!response.ok) {
+          response = await fetchWithAuth(`/api/test-creation/${testId}`);
+        }
 
         const data = await response.json();
 

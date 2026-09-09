@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TeacherLayout from "../components/TeacherLayout";
+import { fetchWithAuth } from "../src/api";
 
 function EditTest() {
   const { testId } = useParams();
@@ -13,6 +14,8 @@ function EditTest() {
     duration: "",
     marksPerQuestion: "",
     negativeMarks: "",
+    isPaid: false,
+    price: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -24,9 +27,10 @@ function EditTest() {
   useEffect(() => {
     const fetchTest = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:5000/api/test-creation/${testId}`
-        );
+        let response = await fetchWithAuth(`/api/tests/${testId}`);
+        if (!response.ok) {
+          response = await fetchWithAuth(`/api/test-creation/${testId}`);
+        }
 
         const data = await response.json();
 
@@ -41,8 +45,10 @@ function EditTest() {
           description: test.description || "",
           subject: test.subject || "",
           duration: test.duration || "",
-          marksPerQuestion: test.marksPerQuestion ?? "",
-          negativeMarks: test.negativeMarks ?? "",
+          marksPerQuestion: test.marksPerQuestion ?? test.marks_per_question ?? "",
+          negativeMarks: test.negativeMarks ?? test.negative_marks ?? "",
+          isPaid: Boolean(test.isPaid ?? test.is_paid),
+          price: test.price ?? "",
         });
       } catch (error) {
         console.error("FETCH TEST ERROR:", error);
@@ -56,11 +62,11 @@ function EditTest() {
   }, [testId]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -72,23 +78,29 @@ function EditTest() {
     setSaving(true);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/test-creation/${testId}`,
-        {
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        subject: formData.subject.trim(),
+        duration: Number(formData.duration),
+        marksPerQuestion: Number(formData.marksPerQuestion),
+        negativeMarks: Number(formData.negativeMarks),
+        isPaid: Boolean(formData.isPaid),
+        is_paid: Boolean(formData.isPaid),
+        price: formData.isPaid ? Number(formData.price) || 0 : 0,
+      };
+
+      let response = await fetchWithAuth(`/api/tests/${testId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        response = await fetchWithAuth(`/api/test-creation/${testId}`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: formData.title.trim(),
-            description: formData.description.trim(),
-            subject: formData.subject.trim(),
-            duration: Number(formData.duration),
-            marksPerQuestion: Number(formData.marksPerQuestion),
-            negativeMarks: Number(formData.negativeMarks),
-          }),
-        }
-      );
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await response.json();
 
@@ -99,7 +111,7 @@ function EditTest() {
       setSuccessMessage("Test updated successfully!");
 
       setTimeout(() => {
-        navigate("/tests");
+        navigate("/test-creator/tests");
       }, 1000);
     } catch (error) {
       console.error("UPDATE TEST ERROR:", error);
@@ -266,6 +278,44 @@ function EditTest() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-yellow-400 resize-none"
                 placeholder="Enter test description"
               />
+            </div>
+
+            {/* Pricing (Free vs Paid) */}
+            <div className="md:col-span-2 bg-[#f9fafb] border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Paid Test Access</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Require students to purchase this test before attempting</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="isPaid"
+                    checked={formData.isPaid}
+                    onChange={handleChange}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                </label>
+              </div>
+
+              {formData.isPaid && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Test Price (₹ INR)
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    placeholder="499"
+                    min="1"
+                    required={formData.isPaid}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-yellow-400"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

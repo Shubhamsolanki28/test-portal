@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import TeacherLayout from "../components/TeacherLayout";
+import { fetchWithAuth } from "../src/api";
 
 function MyTests() {
     const [tests, setTests] = useState([]);
@@ -7,9 +8,10 @@ function MyTests() {
 
     const fetchTests = async () => {
         try {
-            const response = await fetch(
-                "http://localhost:5000/api/test-creation"
-            );
+            let response = await fetchWithAuth("/api/tests");
+            if (!response.ok) {
+                response = await fetchWithAuth("/api/test-creation");
+            }
 
             const data = await response.json();
 
@@ -120,15 +122,28 @@ function MyTests() {
 
                                         </div>
 
-                                        {/* Status */}
-                                        <span
-                                            className={`text-xs font-semibold px-3 py-1 rounded-full ${test.isPublished
-                                                ? "bg-green-100 text-green-700"
-                                                : "bg-yellow-100 text-yellow-700"
+                                        {/* Status and Pricing Badges */}
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                                    test.is_paid || test.isPaid
+                                                        ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                                                 }`}
-                                        >
-                                            {test.isPublished ? "Published" : "Draft"}
-                                        </span>
+                                            >
+                                                {test.is_paid || test.isPaid ? `Paid · ₹${test.price || 499}` : "Free"}
+                                            </span>
+
+                                            <span
+                                                className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                                                    test.isPublished || test.is_published
+                                                        ? "bg-green-100 text-green-700"
+                                                        : "bg-yellow-100 text-yellow-700"
+                                                }`}
+                                            >
+                                                {test.isPublished || test.is_published ? "Published" : "Draft"}
+                                            </span>
+                                        </div>
 
                                     </div>
 
@@ -222,12 +237,15 @@ function MyTests() {
                                         <button
                                             onClick={async () => {
                                                 try {
-                                                    const response = await fetch(
-                                                        `http://localhost:5000/api/test-creation/${test._id}/publish`,
-                                                        {
+                                                    const testId = test.id || test._id;
+                                                    let response = await fetchWithAuth(`/api/tests/${testId}/publish`, {
+                                                        method: "PATCH",
+                                                    });
+                                                    if (!response.ok) {
+                                                        response = await fetchWithAuth(`/api/test-creation/${testId}/publish`, {
                                                             method: "PATCH",
-                                                        }
-                                                    );
+                                                        });
+                                                    }
 
                                                     const data = await response.json();
 
@@ -239,10 +257,11 @@ function MyTests() {
 
                                                     setTests((prevTests) =>
                                                         prevTests.map((item) =>
-                                                            item._id === test._id
+                                                            (item._id === testId || item.id === testId)
                                                                 ? {
                                                                     ...item,
-                                                                    isPublished: data.test.isPublished,
+                                                                    isPublished: data.test?.isPublished ?? !item.isPublished,
+                                                                    is_published: data.test?.is_published ?? !item.is_published,
                                                                 }
                                                                 : item
                                                         )

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { fetchWithAuth, API_BASE } from "./src/api";
 
 function TestCreatorDashboard() {
     const navigate = useNavigate();
@@ -123,61 +124,58 @@ function TestCreatorDashboard() {
     useEffect(() => {
 
         const fetchDashboardData = async () => {
-
             try {
-
                 setLoading(true);
                 setMessage("");
 
-                const [examResponse, questionResponse] =
-                    await Promise.all([
-                        fetch("http://localhost:5000/api/exams"),
-                        fetch("http://localhost:5000/api/questions"),
-                    ]);
+                let tests = [];
+                let questions = [];
 
-                const examData = await examResponse.json();
-                const questionData = await questionResponse.json();
-
-                if (!examResponse.ok) {
-                    throw new Error(
-                        examData.message || "Failed to fetch exams"
-                    );
+                try {
+                    const testRes = await fetchWithAuth("/api/tests");
+                    if (testRes.ok) {
+                        const testData = await testRes.json();
+                        tests = testData.tests || [];
+                    } else {
+                        const examRes = await fetchWithAuth("/api/exams");
+                        if (examRes.ok) {
+                            const examData = await examRes.json();
+                            tests = examData.exams || [];
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Tests fetch error, falling back:", e.message);
                 }
 
-                if (!questionResponse.ok) {
-                    throw new Error(
-                        questionData.message || "Failed to fetch questions"
-                    );
+                try {
+                    const qRes = await fetchWithAuth("/api/questions");
+                    if (qRes.ok) {
+                        const qData = await qRes.json();
+                        questions = qData.questions || [];
+                    }
+                } catch (e) {
+                    console.warn("Questions fetch error:", e.message);
                 }
 
-                const exams = examData.exams || [];
-
-                const questions = questionData.questions || [];
-                setExams(exams);
-                const publishedExams = exams.filter(
-                    (exam) => exam.isPublished
+                setExams(tests);
+                const publishedExams = tests.filter(
+                    (exam) => exam.isPublished || exam.is_published
                 );
 
                 setStats({
-                    totalExams: exams.length,
+                    totalExams: tests.length,
                     totalQuestions: questions.length,
                     publishedExams: publishedExams.length,
-                    draftExams: exams.length - publishedExams.length,
+                    draftExams: Math.max(0, tests.length - publishedExams.length),
                 });
-
             } catch (error) {
-
                 setMessage(error.message);
-
             } finally {
-
                 setLoading(false);
-
             }
         };
 
         fetchDashboardData();
-
     }, []);
 
     return (
@@ -549,9 +547,9 @@ function TestCreatorDashboard() {
                         </button>
 
 
-                        {/* CREATE EXAM */}
+                        {/* CREATE TEST */}
                         <button
-                            onClick={() => navigate("/create-exam")}
+                            onClick={() => navigate("/test-creator/tests/create")}
                             type="button"
                             className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[#c4d4cd] hover:bg-[#12382b] hover:text-[#f4efe3] text-sm mt-1.5 transition"
                         >
@@ -559,13 +557,13 @@ function TestCreatorDashboard() {
                                 +
                             </span>
 
-                            Create Exam
+                            Create Test
                         </button>
 
 
-                        {/* MY EXAMS */}
+                        {/* MY TESTS */}
                         <button
-                            onClick={() => navigate("/exams")}
+                            onClick={() => navigate("/test-creator/tests")}
                             type="button"
                             className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[#c4d4cd] hover:bg-[#12382b] hover:text-[#f4efe3] text-sm mt-1.5 transition"
                         >
@@ -573,13 +571,13 @@ function TestCreatorDashboard() {
                                 □
                             </span>
 
-                            My Exams
+                            My Tests
                         </button>
 
 
                         {/* QUESTION BANK */}
                         <button
-                            onClick={() => navigate("/questions")}
+                            onClick={() => navigate("/test-creator/questions")}
                             type="button"
                             className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[#c4d4cd] hover:bg-[#12382b] hover:text-[#f4efe3] text-sm mt-1.5 transition"
                         >
@@ -590,7 +588,7 @@ function TestCreatorDashboard() {
                             Question Bank
                         </button>
                         <button
-                            onClick={() => navigate("/students-report")}
+                            onClick={() => navigate("/test-creator/results")}
                             type="button"
                             className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[#c4d4cd] hover:bg-[#12382b] hover:text-[#f4efe3] text-sm mt-1.5 transition"
                         >
@@ -599,7 +597,7 @@ function TestCreatorDashboard() {
                             </span>
 
                             <span>
-                                Questions Report
+                                Test Results
                             </span>
                         </button>
 
@@ -937,9 +935,9 @@ function TestCreatorDashboard() {
                                 <div className="p-4 space-y-3">
 
 
-                                    {/* CREATE EXAM */}
+                                    {/* CREATE TEST */}
                                     <button
-                                        onClick={() => navigate("/create-exam")}
+                                        onClick={() => navigate("/test-creator/tests/create")}
                                         type="button"
                                         className="group w-full flex items-center gap-3 p-3.5 rounded-xl border border-[#d7dfda] bg-white hover:border-[#f5b91e] hover:bg-[#fffaf0] transition text-left"
                                     >
@@ -951,11 +949,11 @@ function TestCreatorDashboard() {
                                         <div>
 
                                             <p className="text-sm font-bold text-[#172033]">
-                                                Create Exam
+                                                Create Test
                                             </p>
 
                                             <p className="text-xs text-[#718079] mt-0.5">
-                                                Start a new test
+                                                Start a new assessment
                                             </p>
 
                                         </div>
@@ -965,7 +963,7 @@ function TestCreatorDashboard() {
 
                                     {/* ADD QUESTION */}
                                     <button
-                                        onClick={() => navigate("/questions/add")}
+                                        onClick={() => navigate("/test-creator/questions/add")}
                                         type="button"
                                         className="group w-full flex items-center gap-3 p-3.5 rounded-xl border border-[#d7dfda] bg-white hover:border-[#f5b91e] hover:bg-[#fffaf0] transition text-left"
                                     >
@@ -989,25 +987,50 @@ function TestCreatorDashboard() {
                                     </button>
 
 
-                                    {/* QUESTION BANK */}
+                                    {/* MANAGE TESTS */}
                                     <button
-                                        onClick={() => navigate("/questions")}
+                                        onClick={() => navigate("/test-creator/tests")}
                                         type="button"
                                         className="group w-full flex items-center gap-3 p-3.5 rounded-xl border border-[#d7dfda] bg-white hover:border-[#f5b91e] hover:bg-[#fffaf0] transition text-left"
                                     >
 
                                         <div className="w-10 h-10 shrink-0 rounded-xl bg-[#f1e9ff] text-[#7c3aed] flex items-center justify-center text-lg font-bold group-hover:bg-[#f5b91e] group-hover:text-[#071a14] transition">
-                                            →
+                                            □
                                         </div>
 
                                         <div>
 
                                             <p className="text-sm font-bold text-[#172033]">
-                                                Question Bank
+                                                Manage Tests
                                             </p>
 
                                             <p className="text-xs text-[#718079] mt-0.5">
-                                                Manage all questions
+                                                View, edit and publish tests
+                                            </p>
+
+                                        </div>
+
+                                    </button>
+
+                                    {/* VIEW RESULTS */}
+                                    <button
+                                        onClick={() => navigate("/test-creator/results")}
+                                        type="button"
+                                        className="group w-full flex items-center gap-3 p-3.5 rounded-xl border border-[#d7dfda] bg-white hover:border-[#f5b91e] hover:bg-[#fffaf0] transition text-left"
+                                    >
+
+                                        <div className="w-10 h-10 shrink-0 rounded-xl bg-[#e8f4ed] text-[#16805a] flex items-center justify-center text-lg font-bold group-hover:bg-[#f5b91e] group-hover:text-[#071a14] transition">
+                                            📊
+                                        </div>
+
+                                        <div>
+
+                                            <p className="text-sm font-bold text-[#172033]">
+                                                View Results
+                                            </p>
+
+                                            <p className="text-xs text-[#718079] mt-0.5">
+                                                Student performance & scores
                                             </p>
 
                                         </div>

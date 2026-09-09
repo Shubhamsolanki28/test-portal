@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherLayout from "../components/TeacherLayout";
+import { fetchWithAuth } from "../src/api";
 
 function CreateExam() {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ function CreateExam() {
     duration: "",
     marksPerQuestion: "",
     negativeMarks: "",
+    isPaid: false,
+    price: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -18,11 +21,11 @@ function CreateExam() {
   const [successMessage, setSuccessMessage] = useState("");
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
 
     setFormData((previous) => ({
       ...previous,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -33,27 +36,33 @@ function CreateExam() {
     setMessage("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/test-creation",
-        {
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        subject: formData.subject.trim(),
+        duration: Number(formData.duration),
+        marksPerQuestion: Number(formData.marksPerQuestion),
+        negativeMarks: Number(formData.negativeMarks),
+        isPaid: Boolean(formData.isPaid),
+        is_paid: Boolean(formData.isPaid),
+        price: formData.isPaid ? Number(formData.price) || 0 : 0,
+      };
+
+      let response = await fetchWithAuth("/api/tests", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        response = await fetchWithAuth("/api/test-creation", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: formData.title.trim(),
-            description: formData.description.trim(),
-            subject: formData.subject.trim(),
-            duration: Number(formData.duration),
-            marksPerQuestion: Number(formData.marksPerQuestion),
-            negativeMarks: Number(formData.negativeMarks),
-          }),
-        }
-      );
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         throw new Error(data.message || "Failed to create test");
       }
 
@@ -328,6 +337,45 @@ function CreateExam() {
 
                   </div>
 
+                </div>
+
+
+                {/* PRICING CONFIGURATION (FREE VS PAID) */}
+                <div className="bg-[#f7f9f8] border border-[#d7dfda] rounded-xl p-4 mb-7">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-[#18362d]">Paid Test Access</p>
+                      <p className="text-xs text-[#718079] mt-0.5">Require students to purchase this test before attempting</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="isPaid"
+                        checked={formData.isPaid}
+                        onChange={handleChange}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0b5968]"></div>
+                    </label>
+                  </div>
+
+                  {formData.isPaid && (
+                    <div className="mt-4 pt-4 border-t border-[#e2e8e4]">
+                      <label className="block text-[13px] font-semibold text-[#18362d] mb-1.5">
+                        Test Price (₹ INR)
+                      </label>
+                      <input
+                        type="number"
+                        name="price"
+                        value={formData.price}
+                        onChange={handleChange}
+                        placeholder="499"
+                        min="1"
+                        required={formData.isPaid}
+                        className="w-full h-12 rounded-lg border border-[#ccd7d2] bg-white px-4 text-[14px] text-[#102a25] placeholder:text-[#98a49f] outline-none focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 transition-all"
+                      />
+                    </div>
+                  )}
                 </div>
 
 

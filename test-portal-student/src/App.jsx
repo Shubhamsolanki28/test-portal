@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import StudentDashboard from "./components/StudentDashboard.jsx";
 
 // =====================================================
 // DEFAULT VALUES
@@ -52,6 +53,12 @@ function App() {
   // =====================================================
   // TEST DATA
   // =====================================================
+
+  // View management: "dashboard" or "test"
+  const [currentView, setCurrentView] = useState("dashboard");
+  const [allTests, setAllTests] = useState([]);
+  const [purchasedTestIds, setPurchasedTestIds] = useState(new Set());
+  const [completedSubmissions, setCompletedSubmissions] = useState({});
 
   const [publishedTest, setPublishedTest] = useState(null);
   const [loadingTest, setLoadingTest] = useState(true);
@@ -218,46 +225,122 @@ function App() {
         setLoadingTest(true);
         setTestError("");
 
-        const response = await fetch(
-          "http://localhost:5000/api/test-creation/published"
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to fetch published test"
-          );
+        let data = null;
+        try {
+          const response = await fetch("http://localhost:5000/api/tests/published", {
+            headers: { Authorization: "Bearer student" },
+          });
+          if (response.ok) {
+            data = await response.json();
+          }
+        } catch (err) {
+          console.warn("Retrying with legacy endpoint:", err);
         }
 
-        if (!data.tests || data.tests.length === 0) {
-          throw new Error("No published test available.");
+        if (!data || !data.tests || data.tests.length === 0) {
+          const legacyRes = await fetch("http://localhost:5000/api/test-creation/published", {
+            headers: { Authorization: "Bearer student" },
+          });
+          if (legacyRes.ok) {
+            data = await legacyRes.json();
+          }
         }
 
-        // Latest published test
-        setPublishedTest(data.tests[0]);
-
-        console.log(
-          "Published Test:",
-          data.tests[0]
-        );
+        if (data && data.tests && data.tests.length > 0) {
+          setAllTests(data.tests);
+          setPublishedTest(data.tests[0]);
+        } else {
+          setTestError("No published tests available.");
+        }
       } catch (error) {
-        console.error(
-          "FETCH PUBLISHED TEST ERROR:",
-          error
-        );
-
-        setTestError(
-          error.message ||
-          "Failed to load published test."
-        );
+        console.error("FETCH PUBLISHED TEST ERROR:", error);
+        setTestError(error.message || "Failed to load published test.");
       } finally {
         setLoadingTest(false);
       }
     };
 
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/test-submissions/my-submissions", {
+          headers: { Authorization: "Bearer student" },
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.submissions)) {
+          const map = {};
+          data.submissions.forEach((sub) => {
+            const tId = sub.test_id || sub.testId;
+            if (tId) {
+              map[tId] = {
+                percentage: Number(sub.percentage) || 0,
+                obtainedMarks: Number(sub.obtained_marks ?? sub.obtainedMarks) || 0,
+                totalMarks: Number(sub.total_marks ?? sub.totalMarks) || 0,
+                correct: Number(sub.correct) || 0,
+                incorrect: Number(sub.incorrect) || 0,
+                notAnswered: Number(sub.not_answered ?? sub.notAnswered) || 0,
+                totalQuestions: Number(sub.total_questions ?? sub.totalQuestions) || 0,
+                createdAt: sub.created_at || sub.createdAt,
+              };
+            }
+          });
+          setCompletedSubmissions((prev) => ({ ...prev, ...map }));
+        }
+      } catch (err) {
+        console.warn("Could not fetch submission history:", err);
+      }
+    };
+
     fetchPublishedTest();
+    fetchHistory();
   }, []);
+
+  const handleStartTest = (test) => {
+    setPublishedTest(test);
+    setIsSubmitted(false);
+    setTestResult(null);
+    setCurrentQuestion(1);
+    setTemporaryAnswer(null);
+
+    const questionsCount = test.questions?.length || 0;
+    if (questionsCount > 0) {
+      setQuestionStates(
+        Array.from({ length: questionsCount }, () => ({
+          visited: false,
+          savedAnswer: null,
+          review: false,
+        }))
+      );
+    }
+
+    if (test.duration) {
+      setTimeLeft(Number(test.duration) * 60);
+    }
+
+    setCurrentView("test");
+  };
+
+  const handleUnlockTest = async (test) => {
+    const tId = String(test.id || test._id);
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("dexmy_token") || "student";
+      const res = await fetch(`http://localhost:5000/api/tests/${tId}/purchase`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPurchasedTestIds((prev) => new Set([...prev, tId]));
+      } else {
+        alert(data.message || "Server rejected purchase verification.");
+      }
+    } catch (err) {
+      console.warn("Backend purchase call warning, setting locally:", err.message);
+      setPurchasedTestIds((prev) => new Set([...prev, tId]));
+    }
+  };
 
   useEffect(() => {
     if (publishedTest?.duration) {
@@ -698,9 +781,11 @@ function App() {
 
     try {
       const answers = questionStates.map((item, index) => ({
-        questionId: actualQuestions[index]?._id,
+        questionId: actualQuestions[index]?.id || actualQuestions[index]?._id,
         selectedAnswer: item.savedAnswer,
       }));
+
+      const testId = publishedTest?.id || publishedTest?._id;
 
       const response = await fetch(
         "http://localhost:5000/api/test-submissions",
@@ -708,9 +793,10 @@ function App() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": "Bearer student",
           },
           body: JSON.stringify({
-            testId: publishedTest?._id,
+            testId,
             answers,
           }),
         }
@@ -731,6 +817,22 @@ function App() {
       setShowSubmitConfirm(false);
       setIsSubmitted(true);
       setSubmittedTime(timeLeft);
+
+      if (testId) {
+        setCompletedSubmissions((prev) => ({
+          ...prev,
+          [testId]: {
+            percentage: data.result?.percentage || 0,
+            obtainedMarks: data.result?.obtainedMarks || 0,
+            totalMarks: data.result?.totalMarks || 0,
+            correct: data.result?.correct || 0,
+            incorrect: data.result?.incorrect || 0,
+            notAnswered: data.result?.notAnswered || 0,
+            totalQuestions: data.result?.totalQuestions || actualQuestions.length,
+            createdAt: new Date().toISOString(),
+          },
+        }));
+      }
 
     } catch (error) {
       console.error("SUBMIT TEST ERROR:", error);
@@ -797,19 +899,33 @@ function App() {
   // LOADING SCREEN
   // =====================================================
 
+  // If in dashboard view, render Student Dashboard
+  if (currentView === "dashboard") {
+    return (
+      <StudentDashboard
+        tests={allTests.length > 0 ? allTests : (publishedTest ? [publishedTest] : [])}
+        completedSubmissions={completedSubmissions}
+        purchasedTestIds={purchasedTestIds}
+        onStartTest={handleStartTest}
+        onUnlockTest={handleUnlockTest}
+      />
+    );
+  }
+
   if (loadingTest) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#071a14] text-white flex items-center justify-center p-6">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-[#fecaca] border-t-[#e31b23] animate-spin" />
-
-          <h2 className="text-xl font-bold text-[#111827]">
-            Loading Test...
-          </h2>
-
-          <p className="mt-1 text-sm text-[#6b7280]">
-            Please wait while we load your test.
-          </p>
+          <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-[#1b3f32] border-t-[#e31b23] animate-spin" />
+          <h2 className="text-xl font-bold text-white">Loading Test...</h2>
+          <p className="mt-1 text-sm text-[#9eb7ad]">Please wait while we load your test.</p>
+          <button
+            type="button"
+            onClick={() => setCurrentView("dashboard")}
+            className="mt-6 px-4 py-2 rounded-lg bg-[#0e2c22] border border-[#1b3f32] text-xs font-semibold text-[#b8d1c6] hover:text-white hover:bg-[#163e30] transition"
+          >
+            ← Back to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -826,32 +942,36 @@ function App() {
     publishedTest.questions.length === 0
   ) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="w-full max-w-lg rounded-2xl border border-[#fecaca] bg-[#fffafa] p-8 text-center shadow-sm">
-
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fef2f2] text-2xl text-[#e31b23]">
+      <div className="min-h-screen bg-[#071a14] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-lg rounded-2xl border border-[#275846] bg-[#0b231b] p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#1b3f32] text-2xl text-[#f5b91e]">
             !
           </div>
 
-          <h1 className="mt-4 text-2xl font-bold text-[#111827]">
+          <h1 className="mt-4 text-2xl font-bold text-white">
             Test Not Available
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-[#6b7280]">
-            {testError ||
-              "There are no questions available in this test yet."}
+          <p className="mt-2 text-sm leading-6 text-[#9eb7ad]">
+            {testError || "There are no questions available in this test yet."}
           </p>
 
-          <button
-            type="button"
-            onClick={() =>
-              window.location.reload()
-            }
-            className="mt-6 rounded-lg bg-[#e31b23] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b91c1c]"
-          >
-            Refresh
-          </button>
-
+          <div className="mt-6 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setCurrentView("dashboard")}
+              className="rounded-lg bg-[#0e2c22] border border-[#275846] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163e30]"
+            >
+              ← Back to Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-lg bg-[#e31b23] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b91c1c]"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1185,13 +1305,25 @@ function App() {
 
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowDetailedResult(true)}
-                className="px-5 py-3 rounded-lg bg-[#e31b23] text-white font-bold transition hover:bg-[#c8171e]"
-              >
-                View Results →
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailedResult(false);
+                    setCurrentView("dashboard");
+                  }}
+                  className="px-5 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-bold transition hover:bg-gray-100"
+                >
+                  ← Return to Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailedResult(true)}
+                  className="px-5 py-3 rounded-lg bg-[#e31b23] text-white font-bold transition hover:bg-[#c8171e]"
+                >
+                  View Results →
+                </button>
+              </div>
 
             </div>
 
@@ -1226,13 +1358,25 @@ function App() {
                   </h1>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowDetailedResult(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-[#e31b23] hover:bg-red-50 hover:text-[#e31b23]"
-                >
-                  ← Back
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDetailedResult(false);
+                      setCurrentView("dashboard");
+                    }}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                  >
+                    ← Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailedResult(false)}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-[#e31b23] hover:bg-red-50 hover:text-[#e31b23]"
+                  >
+                    Close Review
+                  </button>
+                </div>
 
               </div>
 
@@ -1652,17 +1796,26 @@ function App() {
 
         {/* LEFT */}
 
-        <div className="min-w-0">
-
-          <h1 className="text-2xl font-bold text-[#111827] tracking-tight">
-            {publishedTest.title}
-          </h1>
-
-          <p className="text-sm text-[#e31b23] mt-0.5">
-            {publishedTest.subject ||
-              "General Awareness"}
-          </p>
-
+        <div className="flex items-center gap-4 min-w-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("Return to student dashboard? Your in-progress answers will not be submitted.")) {
+                setCurrentView("dashboard");
+              }
+            }}
+            className="px-3.5 py-2 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] hover:bg-red-50 hover:text-[#e31b23] hover:border-[#fecaca] text-xs font-bold text-[#374151] transition shrink-0 flex items-center gap-1.5"
+          >
+            <span>←</span> Dashboard
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#111827] tracking-tight truncate">
+              {publishedTest.title}
+            </h1>
+            <p className="text-xs sm:text-sm text-[#e31b23] font-medium mt-0.5">
+              {publishedTest.subject || "General Awareness"}
+            </p>
+          </div>
         </div>
 
         {/* RIGHT */}

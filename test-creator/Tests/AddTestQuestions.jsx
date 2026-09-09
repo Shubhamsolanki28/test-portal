@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TeacherLayout from "../components/TeacherLayout";
+import { fetchWithAuth } from "../src/api";
 
 function AddTestQuestions() {
     const { testId } = useParams();
@@ -24,10 +25,8 @@ function AddTestQuestions() {
             setError("");
 
             const [testResponse, questionsResponse] = await Promise.all([
-                fetch(
-                    `http://localhost:5000/api/test-creation/${testId}`
-                ),
-                fetch("http://localhost:5000/api/questions"),
+                fetchWithAuth(`/api/tests/${testId}`),
+                fetchWithAuth("/api/questions"),
             ]);
 
             const testData = await testResponse.json();
@@ -86,18 +85,17 @@ function AddTestQuestions() {
             setMessage("");
             setError("");
 
-            const response = await fetch(
-                `http://localhost:5000/api/test-creation/${testId}/questions`,
-                {
+            let response = await fetchWithAuth(`/api/tests/${testId}/questions`, {
+                method: "POST",
+                body: JSON.stringify({ questionId }),
+            });
+
+            if (!response.ok) {
+                response = await fetchWithAuth(`/api/test-creation/${testId}/questions`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        questionId,
-                    }),
-                }
-            );
+                    body: JSON.stringify({ questionId }),
+                });
+            }
 
             const data = await response.json();
 

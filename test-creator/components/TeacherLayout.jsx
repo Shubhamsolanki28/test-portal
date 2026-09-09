@@ -166,31 +166,29 @@ function TeacherLayout({ children }) {
     const navItems = [
         {
             label: "Dashboard",
-            path: "/",
+            path: "/test-creator",
             icon: "▦",
         },
         {
             label: "Create Test",
-            path: "/create-test",
+            path: "/test-creator/tests/create",
             icon: "+",
         },
-        {
-            label: "My Exams",
-            path: "/exams",
-            icon: "□",
+        { 
+            label: "My Tests", 
+            path: "/test-creator/tests", 
+            icon: "□" 
         },
-        { label: "My Tests", path: "/tests", icon: "□" },
         {
             label: "Question Bank",
-            path: "/questions",
+            path: "/test-creator/questions",
             icon: "?",
         },
         {
-            label: "Questions Report",
-            path: "/students-report",
+            label: "Test Results",
+            path: "/test-creator/results",
             icon: "📊",
         },
-
     ];
 
     // =====================================================

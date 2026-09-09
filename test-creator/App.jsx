@@ -68,9 +68,21 @@ function App() {
           element={<StudentsReport />}
         />
 
+        {/* Dedicated Task 3 Test Creator Routes */}
+        <Route path="/test-creator" element={<TestCreatorDashboard />} />
+        <Route path="/test-creator/tests" element={<MyTests />} />
+        <Route path="/test-creator/tests/create" element={<CreateExam />} />
+        <Route path="/test-creator/tests/:testId/edit" element={<EditTest />} />
+        <Route path="/test-creator/tests/:testId/questions" element={<AddTestQuestions />} />
+        <Route path="/test-creator/tests/:testId/preview" element={<TestPreview />} />
+        <Route path="/test-creator/tests/:testId/results" element={<StudentsReport />} />
+        <Route path="/test-creator/results" element={<StudentsReport />} />
+        <Route path="/test-creator/questions" element={<AllQuestions />} />
+        <Route path="/test-creator/questions/add" element={<AddQuestion />} />
+
+        {/* Legacy / Direct Aliases */}
         <Route path="/tests" element={<MyTests />} />
-
-
+        <Route path="/create-exam" element={<CreateExam />} />
         <Route
           path="/tests/:testId/preview"
           element={<TestPreview />}
