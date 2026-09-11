@@ -1,704 +1,256 @@
-import { useEffect, useRef, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Link, useNavigate, useLocation } from "react-router-dom";
+import {
+  DashboardIcon,
+  TestsIcon,
+  PlusIcon,
+  QuestionIcon,
+  AnalyticsIcon,
+  UserIcon,
+  LogoutIcon,
+  MenuIcon,
+  CloseIcon,
+} from "./Icons";
 
+// --- Dexmy palette ---
+const C = {
+  void: "#0F1D17",
+  panel: "#152922",
+  panel2: "#1B3229",
+  panel3: "#223B31",
+  chalk: "#F2ECDD",
+  chalkMuted: "#9BAFA0",
+  chalkFaint: "rgba(242,236,221,0.08)",
+  red: "#E4271C",
+  redSoft: "rgba(228,39,28,0.16)",
+  gold: "#F0B429",
+  goldDark: "#2C1E04",
+};
+
+const NAV_SECTIONS = [
+  {
+    label: "Assessments",
+    items: [
+      { path: "/test-creator", label: "Dashboard", Icon: DashboardIcon },
+      { path: "/test-creator/tests/create", label: "Create Test", Icon: PlusIcon },
+      { path: "/test-creator/tests", label: "My Tests", Icon: TestsIcon },
+    ],
+  },
+  {
+    label: "Question Bank",
+    items: [
+      { path: "/test-creator/questions", label: "Repository", Icon: QuestionIcon },
+      { path: "/test-creator/questions/add", label: "New Question", Icon: PlusIcon },
+    ],
+  },
+  {
+    label: "Performance",
+    items: [
+      { path: "/test-creator/results", label: "Test Results", Icon: AnalyticsIcon },
+      { path: "/profile", label: "Teacher Profile", Icon: UserIcon },
+    ],
+  },
+];
+
+function initials(name) {
+  if (!name) return "T";
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function SidebarNav({ profile, onClose, onLogout }) {
+  const location = useLocation();
+
+  return (
+    <>
+      {/* Brand Header */}
+      <div className="flex items-center justify-between mb-7">
+        <Link to="/test-creator" onClick={onClose} className="flex items-center gap-2.5">
+          <img src="/dexmy.png" alt="Dexmy" className="h-8 w-auto object-contain" />
+        </Link>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden text-chalk-muted hover:text-chalk p-1 transition"
+            aria-label="Close menu"
+          >
+            <CloseIcon size={20} />
+          </button>
+        )}
+      </div>
+
+      {/* Navigation Sections */}
+      <nav className="flex-1 space-y-5 overflow-y-auto">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.label}>
+            <div className="text-[11px] font-semibold tracking-wider uppercase text-chalk-muted opacity-60 mb-2 ml-3">
+              {section.label}
+            </div>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const isActive =
+                  location.pathname === item.path ||
+                  (item.path === "/test-creator" && location.pathname === "/");
+                const IconComp = item.Icon;
+
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={onClose}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition ${
+                      isActive
+                        ? "bg-brand-red-soft text-chalk shadow-[inset_3px_0_0_#E4271C]"
+                        : "text-chalk-muted hover:bg-panel-2 hover:text-chalk"
+                    }`}
+                  >
+                    <span className={isActive ? "text-brand-red" : "text-chalk-muted"}>
+                      <IconComp size={18} />
+                    </span>
+                    <span>{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {/* Bottom Profile & Logout */}
+      <div className="pt-4 mt-auto border-t border-chalk-faint space-y-3">
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium text-chalk-muted hover:bg-panel-2 hover:text-chalk transition w-full text-left"
+        >
+          <LogoutIcon size={18} />
+          <span>Log out</span>
+        </button>
+
+        <Link
+          to="/profile"
+          onClick={onClose}
+          className="pt-3 border-t border-chalk-faint flex items-center gap-2.5 hover:opacity-90 transition"
+        >
+          <div className="w-9 h-9 rounded-full bg-brand-gold text-[#2C1E04] flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden shadow">
+            {profile?.photo ? (
+              <img
+                src={profile.photo}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              initials(profile?.fullName)
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13.5px] font-semibold text-chalk truncate">
+              {profile?.fullName || "Teacher"}
+            </div>
+            <div className="text-xs text-chalk-muted truncate">
+              {profile?.designation || "Test Creator"}
+            </div>
+          </div>
+        </Link>
+      </div>
+    </>
+  );
+}
 
 function TeacherLayout({ children }) {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [profile, setProfile] = useState({
+    fullName: "",
+    email: "",
+    designation: "",
+    photo: "",
+  });
 
-    const [showTeacherMenu, setShowTeacherMenu] = useState(false);
-    const [showNotifications, setShowNotifications] = useState(false);
-
-    const [notifications, setNotifications] = useState([]);
-
-    const [teacherProfile, setTeacherProfile] = useState({
-        fullName: "",
-        email: "",
-        mobile: "",
-        designation: "",
-        department: "",
-        city: "",
-        photo: "",
-    });
-
-    const teacherMenuRef = useRef(null);
-    const notificationRef = useRef(null);
-
-    // =====================================================
-    // LOAD TEACHER PROFILE
-    // =====================================================
-
-    useEffect(() => {
-        const loadTeacherProfile = () => {
-            const savedProfile = localStorage.getItem("teacherProfile");
-
-            if (!savedProfile) return;
-
-            try {
-                const data = JSON.parse(savedProfile);
-
-                setTeacherProfile({
-                    fullName: data.fullName || "",
-                    email: data.email || "",
-                    mobile: data.mobile || "",
-                    designation: data.designation || "",
-                    department: data.department || "",
-                    city: data.city || "",
-                    photo: data.photo || "",
-                });
-            } catch (error) {
-                console.error("Failed to load teacher profile:", error);
-            }
-        };
-
-        loadTeacherProfile();
-    }, []);
-
-    // =====================================================
-    // LOAD NOTIFICATIONS
-    // =====================================================
-
-    useEffect(() => {
-        const loadNotifications = () => {
-            try {
-                const savedNotifications =
-                    JSON.parse(
-                        localStorage.getItem("teacherNotifications")
-                    ) || [];
-
-                setNotifications(savedNotifications);
-            } catch (error) {
-                console.error("Failed to load notifications:", error);
-                setNotifications([]);
-            }
-        };
-
-        loadNotifications();
-
-        const handleStorageChange = (event) => {
-            if (event.key === "teacherNotifications") {
-                loadNotifications();
-            }
-
-            if (event.key === "teacherProfile") {
-                const savedProfile =
-                    localStorage.getItem("teacherProfile");
-
-                if (savedProfile) {
-                    try {
-                        const data = JSON.parse(savedProfile);
-
-                        setTeacherProfile({
-                            fullName: data.fullName || "",
-                            email: data.email || "",
-                            mobile: data.mobile || "",
-                            designation: data.designation || "",
-                            department: data.department || "",
-                            city: data.city || "",
-                            photo: data.photo || "",
-                        });
-                    } catch {
-                        // Ignore invalid profile data
-                    }
-                }
-            }
-        };
-
-        window.addEventListener(
-            "storage",
-            handleStorageChange
-        );
-
-        return () => {
-            window.removeEventListener(
-                "storage",
-                handleStorageChange
-            );
-        };
-    }, []);
-
-    // =====================================================
-    // CLOSE DROPDOWNS ON OUTSIDE CLICK
-    // =====================================================
-
-    useEffect(() => {
-        const handleOutsideClick = (event) => {
-            if (
-                teacherMenuRef.current &&
-                !teacherMenuRef.current.contains(event.target)
-            ) {
-                setShowTeacherMenu(false);
-            }
-
-            if (
-                notificationRef.current &&
-                !notificationRef.current.contains(event.target)
-            ) {
-                setShowNotifications(false);
-            }
-        };
-
-        document.addEventListener(
-            "mousedown",
-            handleOutsideClick
-        );
-
-        return () => {
-            document.removeEventListener(
-                "mousedown",
-                handleOutsideClick
-            );
-        };
-    }, []);
-
-    // =====================================================
-    // PROFILE INITIAL
-    // =====================================================
-
-    const teacherInitial =
-        teacherProfile.fullName
-            ? teacherProfile.fullName.charAt(0).toUpperCase()
-            : "T";
-
-    // =====================================================
-    // NAVIGATION ITEM
-    // =====================================================
-
-    const navItems = [
-        {
-            label: "Dashboard",
-            path: "/test-creator",
-            icon: "▦",
-        },
-        {
-            label: "Create Test",
-            path: "/test-creator/tests/create",
-            icon: "+",
-        },
-        { 
-            label: "My Tests", 
-            path: "/test-creator/tests", 
-            icon: "□" 
-        },
-        {
-            label: "Question Bank",
-            path: "/test-creator/questions",
-            icon: "?",
-        },
-        {
-            label: "Test Results",
-            path: "/test-creator/results",
-            icon: "📊",
-        },
-    ];
-
-    // =====================================================
-    // LOGOUT
-    // =====================================================
-
-    const handleLogout = () => {
-        localStorage.removeItem("teacherToken");
-
-        navigate("/login");
+  useEffect(() => {
+    const load = () => {
+      const raw = localStorage.getItem("teacherProfile");
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        setProfile({
+          fullName: data.fullName || "",
+          email: data.email || "",
+          designation: data.designation || "",
+          photo: data.photo || "",
+        });
+      } catch {}
     };
-
-    return (
-        <div className="min-h-screen bg-[#f5f7f4] text-[#172033]">
-
-            {/* =================================================
-          TOP HEADER
-      ================================================= */}
-
-            <header className="h-16 shrink-0 bg-[#0b211a] border-b border-[#29463b] text-[#f4efe3] flex items-center justify-between px-4 sm:px-6 lg:px-8">
-
-                {/* BRAND */}
-
-                <div className="flex items-center gap-3 min-w-0">
-
-                    <div className="w-9 h-9 shrink-0 rounded-lg bg-[#f5b91e] text-[#071a14] flex items-center justify-center font-extrabold text-lg">
-                        D
-                    </div>
-
-                    <div className="min-w-0">
-
-                        <h1 className="font-bold text-[17px] leading-tight truncate">
-                            Teacher Portal
-                        </h1>
-
-                        <p className="text-[11px] text-[#a8c2b7] hidden sm:block">
-                            DexMy Education
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                {/* HEADER RIGHT */}
-
-                <div className="flex items-center gap-2 sm:gap-4">
-
-                    {/* =================================================
-              NOTIFICATIONS
-          ================================================= */}
-
-                    <div
-                        ref={notificationRef}
-                        className="relative"
-                    >
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowNotifications((prev) => !prev);
-                                setShowTeacherMenu(false);
-                            }}
-                            className="relative w-9 h-9 rounded-lg border border-[#3c5d50] bg-[#123025] text-[#f4efe3] flex items-center justify-center hover:bg-[#1a3b2e] hover:border-[#f5b91e] transition-all duration-200"
-                        >
-
-                            <span className="text-[17px]">
-                                ♧
-                            </span>
-
-                            {notifications.length > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 rounded-full bg-[#f5b91e] text-[#071a14] text-[9px] font-extrabold flex items-center justify-center border-2 border-[#0b211a]">
-                                    {notifications.length}
-                                </span>
-                            )}
-
-                        </button>
-
-
-                        {/* NOTIFICATION DROPDOWN */}
-
-                        {showNotifications && (
-                            <div className="absolute right-0 top-full mt-2 w-[330px] max-w-[calc(100vw-24px)] bg-[#f8f7f2] border border-[#29463b] rounded-2xl shadow-2xl z-[100] overflow-hidden">
-
-                                <div className="px-4 py-4 bg-[#0b211a] text-[#f4efe3] flex items-center justify-between">
-
-                                    <div>
-                                        <h3 className="font-semibold">
-                                            Notifications
-                                        </h3>
-
-                                        <p className="text-[11px] text-[#a8c2b7] mt-0.5">
-                                            Recent activity
-                                        </p>
-                                    </div>
-
-                                    {notifications.length > 0 && (
-                                        <span className="text-[11px] font-bold text-[#071a14] bg-[#f5b91e] px-2 py-1 rounded-full">
-                                            {notifications.length} New
-                                        </span>
-                                    )}
-
-                                </div>
-
-
-                                <div className="max-h-[350px] overflow-y-auto">
-
-                                    {notifications.length === 0 ? (
-
-                                        <div className="p-8 text-center">
-
-                                            <div className="w-11 h-11 mx-auto rounded-full bg-[#e8f0eb] text-[#0b211a] flex items-center justify-center text-xl mb-3">
-                                                ♧
-                                            </div>
-
-                                            <p className="text-sm font-semibold text-[#172033]">
-                                                No notifications
-                                            </p>
-
-                                            <p className="text-xs text-[#718079] mt-1">
-                                                You're all caught up.
-                                            </p>
-
-                                        </div>
-
-                                    ) : (
-
-                                        notifications.map((notification) => (
-
-                                            <div
-                                                key={notification.id}
-                                                className="px-4 py-3 border-b border-[#e3e8e4] hover:bg-[#f1f5f2] transition"
-                                            >
-
-                                                <div className="flex gap-3">
-
-                                                    <div
-                                                        className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-sm font-bold ${notification.type === "success"
-                                                            ? "bg-[#e8f4ed] text-[#177245]"
-                                                            : notification.type === "question"
-                                                                ? "bg-[#f1e9ff] text-[#6d28d9]"
-                                                                : "bg-[#e8f0ff] text-[#315aa8]"
-                                                            }`}
-                                                    >
-                                                        {notification.type === "success"
-                                                            ? "✓"
-                                                            : notification.type === "question"
-                                                                ? "?"
-                                                                : "i"}
-                                                    </div>
-
-
-                                                    <div className="min-w-0 flex-1">
-
-                                                        <p className="text-sm font-semibold text-[#172033]">
-                                                            {notification.title}
-                                                        </p>
-
-                                                        <p className="text-xs text-[#718079] mt-1 leading-5">
-                                                            {notification.description}
-                                                        </p>
-
-                                                        <p className="text-[10px] text-[#9aa7a1] mt-1.5">
-                                                            {notification.time}
-                                                        </p>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </div>
-
-                                        ))
-
-                                    )}
-
-                                </div>
-
-
-                                <div className="p-3 border-t border-[#d7dfda] bg-[#f8f7f2]">
-
-                                    <button
-                                        type="button"
-                                        className="w-full py-2 rounded-lg text-xs font-bold text-[#0b5968] hover:bg-[#e8f0eb] transition"
-                                    >
-                                        View All Notifications
-                                    </button>
-
-                                </div>
-
-                            </div>
-                        )}
-
-                    </div>
-
-
-                    {/* =================================================
-              TEACHER PROFILE
-          ================================================= */}
-
-                    <div
-                        ref={teacherMenuRef}
-                        className="relative"
-                    >
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowTeacherMenu((prev) => !prev);
-                                setShowNotifications(false);
-                            }}
-                            className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 hover:bg-[#123025] transition text-left"
-                        >
-
-                            {/* PROFILE PHOTO */}
-
-                            <div className="w-9 h-9 shrink-0 rounded-full bg-[#f5b91e] text-[#071a14] flex items-center justify-center font-bold overflow-hidden">
-
-                                {teacherProfile.photo ? (
-
-                                    <img
-                                        src={teacherProfile.photo}
-                                        alt="Profile"
-                                        className="w-full h-full object-cover"
-                                    />
-
-                                ) : (
-
-                                    teacherInitial
-
-                                )}
-
-                            </div>
-
-
-                            <div className="hidden sm:block">
-
-                                <p className="text-sm font-semibold text-[#f4efe3] max-w-[150px] truncate">
-                                    {teacherProfile.fullName || "Teacher"}
-                                </p>
-
-                                <p className="text-[11px] text-[#a8c2b7] max-w-[150px] truncate">
-                                    {teacherProfile.designation || "Teacher"}
-                                </p>
-
-                            </div>
-
-                            <span className="text-[#a8c2b7] text-xs">
-                                ▼
-                            </span>
-
-                        </button>
-
-
-                        {/* PROFILE DROPDOWN */}
-
-                        {showTeacherMenu && (
-                            <div className="absolute right-0 top-full mt-2 w-[310px] max-w-[calc(100vw-24px)] bg-[#f8f7f2] border border-[#29463b] rounded-2xl shadow-2xl z-[100] overflow-hidden">
-
-                                {/* PROFILE HEADER */}
-
-                                <div className="p-4 bg-[#0b211a] text-[#f4efe3]">
-
-                                    <div className="flex items-center gap-3">
-
-                                        <div className="w-12 h-12 shrink-0 rounded-full bg-[#f5b91e] text-[#071a14] flex items-center justify-center font-bold overflow-hidden">
-
-                                            {teacherProfile.photo ? (
-
-                                                <img
-                                                    src={teacherProfile.photo}
-                                                    alt="Profile"
-                                                    className="w-full h-full object-cover"
-                                                />
-
-                                            ) : (
-
-                                                teacherInitial
-
-                                            )}
-
-                                        </div>
-
-
-                                        <div className="min-w-0">
-
-                                            <div className="flex items-center gap-2">
-
-                                                <h3 className="font-semibold truncate">
-                                                    {teacherProfile.fullName || "Teacher"}
-                                                </h3>
-
-                                                <span className="text-[9px] font-bold text-[#177245] bg-[#e8f4ed] px-1.5 py-0.5 rounded-full">
-                                                    Active
-                                                </span>
-
-                                            </div>
-
-                                            <p className="text-xs text-[#a8c2b7] mt-0.5 truncate">
-                                                {teacherProfile.designation || "Teacher"}
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                {/* DETAILS */}
-
-                                <div className="p-3">
-
-                                    <div className="grid grid-cols-2 gap-2">
-
-                                        <div className="rounded-xl bg-white border border-[#d7dfda] p-2.5">
-
-                                            <p className="text-[9px] uppercase tracking-wider text-[#8a9891]">
-                                                Email
-                                            </p>
-
-                                            <p className="text-xs font-medium text-[#172033] truncate mt-1">
-                                                {teacherProfile.email || "Not added"}
-                                            </p>
-
-                                        </div>
-
-
-                                        <div className="rounded-xl bg-white border border-[#d7dfda] p-2.5">
-
-                                            <p className="text-[9px] uppercase tracking-wider text-[#8a9891]">
-                                                Mobile
-                                            </p>
-
-                                            <p className="text-xs font-medium text-[#172033] truncate mt-1">
-                                                {teacherProfile.mobile || "Not added"}
-                                            </p>
-
-                                        </div>
-
-
-                                        <div className="rounded-xl bg-white border border-[#d7dfda] p-2.5">
-
-                                            <p className="text-[9px] uppercase tracking-wider text-[#8a9891]">
-                                                Department
-                                            </p>
-
-                                            <p className="text-xs font-medium text-[#172033] truncate mt-1">
-                                                {teacherProfile.department || "Not added"}
-                                            </p>
-
-                                        </div>
-
-
-                                        <div className="rounded-xl bg-white border border-[#d7dfda] p-2.5">
-
-                                            <p className="text-[9px] uppercase tracking-wider text-[#8a9891]">
-                                                City
-                                            </p>
-
-                                            <p className="text-xs font-medium text-[#172033] truncate mt-1">
-                                                {teacherProfile.city || "Not added"}
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-
-                                {/* PROFILE BUTTON */}
-
-                                <div className="px-3 pb-3">
-
-                                    <button
-                                        type="button"
-                                        onClick={() => window.open("/profile", "_blank")}
-                                        className="w-full h-10 rounded-lg bg-[#0b211a] text-[#f4efe3] text-sm font-semibold border border-[#29463b] hover:bg-[#f5b91e] hover:text-[#071a14] hover:border-[#f5b91e] transition-all duration-200"
-                                    >
-                                        View Profile
-                                    </button>
-
-                                </div>
-
-                            </div>
-                        )}
-
-                    </div>
-
-                </div>
-
-            </header>
-
-
-            {/* =================================================
-          PAGE AREA
-      ================================================= */}
-
-            <div className="flex min-h-[calc(100vh-4rem)]">
-
-
-                {/* =================================================
-            SIDEBAR
-        ================================================= */}
-
-                <aside className="hidden md:flex w-[245px] shrink-0 bg-[#f8f7f2] border-r border-[#d7dfda] flex-col">
-
-                    <nav className="p-4">
-
-                        <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#8a9891] px-3 mb-3">
-                            Main Menu
-                        </p>
-
-
-                        <div className="space-y-1">
-
-                            {navItems.map((item) => (
-
-                                <NavLink
-                                    key={item.path}
-                                    to={item.path}
-                                    className={({ isActive }) =>
-                                        `group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 ${isActive
-                                            ? "bg-[#0b211a] text-[#f4efe3] shadow-sm"
-                                            : "text-[#52645c] hover:bg-[#e8eee9] hover:text-[#0b211a]"
-                                        }`
-                                    }
-                                >
-
-                                    {({ isActive }) => (
-                                        <>
-                                            <span
-                                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${isActive
-                                                    ? "bg-[#f5b91e] text-[#071a14]"
-                                                    : "bg-[#e8eee9] text-[#0b5968] group-hover:bg-[#dce7e0]"
-                                                    }`}
-                                            >
-                                                {item.icon}
-                                            </span>
-
-                                            <span className="font-medium">
-                                                {item.label}
-                                            </span>
-                                        </>
-                                    )}
-
-                                </NavLink>
-
-                            ))}
-
-                        </div>
-
-                    </nav>
-
-
-                    {/* SIDEBAR BOTTOM */}
-
-                    <div className="mt-auto p-4 border-t border-[#d7dfda]">
-
-                        <button
-                            type="button"
-                            onClick={() => window.open("/profile", "_blank")}
-                            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#52645c] hover:bg-[#e8eee9] hover:text-[#0b211a] text-sm transition"
-                        >
-
-                            <span className="w-8 h-8 rounded-lg bg-[#e8eee9] flex items-center justify-center">
-                                ⚙
-                            </span>
-
-                            <span className="font-medium">
-                                Settings
-                            </span>
-
-                        </button>
-
-
-                        <button
-                            type="button"
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[#b34d42] hover:bg-[#faece9] text-sm mt-1 transition"
-                        >
-
-                            <span className="w-8 h-8 rounded-lg bg-[#faece9] flex items-center justify-center">
-                                ↪
-                            </span>
-
-                            <span className="font-medium">
-                                Logout
-                            </span>
-
-                        </button>
-
-                    </div>
-
-                </aside>
-
-
-                {/* =================================================
-            MAIN CONTENT
-        ================================================= */}
-
-                <main className="flex-1 min-w-0 overflow-x-hidden">
-                    {children}
-                </main>
-
-            </div>
-
+    load();
+    window.addEventListener("storage", load);
+    return () => window.removeEventListener("storage", load);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("teacherToken");
+    localStorage.removeItem("dexmy_token");
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col md:flex-row bg-void text-chalk font-body">
+      {/* --- Mobile Header (identical to Dexmy) --- */}
+      <header className="md:hidden flex items-center justify-between px-4 py-3.5 bg-panel border-b border-chalk-faint sticky top-0 z-40">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 rounded-xl border border-chalk-faint text-chalk hover:bg-panel-2 transition"
+          aria-label="Open navigation menu"
+        >
+          <MenuIcon size={20} />
+        </button>
+
+        <Link to="/test-creator">
+          <img src="/dexmy.png" alt="Dexmy" className="h-7 w-auto object-contain" />
+        </Link>
+
+        <Link
+          to="/profile"
+          className="w-8 h-8 rounded-full bg-brand-gold text-[#2C1E04] flex items-center justify-center font-bold text-xs shadow"
+        >
+          {initials(profile?.fullName)}
+        </Link>
+      </header>
+
+      {/* --- Mobile Slide-out Drawer --- */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="relative z-50 w-72 max-w-[85vw] bg-panel h-full flex flex-col p-6 shadow-2xl border-r border-chalk-faint">
+            <SidebarNav
+              profile={profile}
+              onClose={() => setMobileOpen(false)}
+              onLogout={handleLogout}
+            />
+          </aside>
         </div>
-    );
+      )}
+
+      {/* --- Desktop Fixed Sidebar (stationary on PC, does not scroll with main content) --- */}
+      <aside className="hidden md:flex w-64 shrink-0 bg-panel border-r border-chalk-faint flex-col p-6 fixed inset-y-0 left-0 z-30 overflow-y-auto">
+        <SidebarNav profile={profile} onLogout={handleLogout} />
+      </aside>
+
+      {/* Spacer to preserve layout flow with fixed sidebar */}
+      <div className="hidden md:block w-64 shrink-0" aria-hidden="true" />
+
+      {/* --- Main Content Area --- */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        {children}
+      </main>
+    </div>
+  );
 }
 
 export default TeacherLayout;

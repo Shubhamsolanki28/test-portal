@@ -1,4 +1,14 @@
 import { useState, useMemo } from "react";
+import {
+  LockIcon,
+  CheckIcon,
+  TrophyIcon,
+  GiftIcon,
+  CloseIcon,
+  SearchIcon,
+  ArrowRightIcon,
+  ClockIcon,
+} from "./Icons";
 
 export default function StudentDashboard({
   tests = [],
@@ -81,75 +91,68 @@ export default function StudentDashboard({
   }, [tests, activeTab, selectedSubject, searchQuery, purchasedTestIds, completedSubmissions]);
 
   return (
-    <div className="min-h-screen bg-[#071a14] text-[#f4efe3] font-sans pb-16">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-[#0b231b]/95 backdrop-blur-md border-b border-[#1b3d30] px-6 py-4 flex items-center justify-between shadow-lg">
+    <div className="min-h-screen bg-void text-chalk font-body pb-16">
+      {/* Top Header Bar (matches Dexmy Navbar) */}
+      <header className="sticky top-0 z-30 bg-panel/95 backdrop-blur-md border-b border-chalk-faint px-4 py-3 sm:py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#e31b23] to-[#f59e0b] flex items-center justify-center text-white font-black text-xl shadow-md">
-            D
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              Dexmy <span className="text-[#f5b91e] font-normal text-sm px-2 py-0.5 rounded-full bg-[#1b3d30] border border-[#2a5745]">Testing System</span>
-            </h1>
-            <p className="text-xs text-[#9eb7ad]">Student Assessment & Examination Dashboard</p>
-          </div>
+          <img src="/dexmy.png" alt="Dexmy" className="h-8 sm:h-9 w-auto object-contain" />
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-panel-2 border border-chalk-faint text-chalk-muted">
+            Student Assessment Portal
+          </span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0e2c22] border border-[#1b3d30] text-xs text-[#b8d1c6]">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Role: <span className="font-semibold text-emerald-300">Student</span>
+        <div className="flex items-center gap-3.5">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-panel-2 border border-chalk-faint text-xs text-chalk-muted">
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            <span>Active Student Session</span>
           </div>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center font-bold text-white text-sm border border-emerald-400/30 shadow">
+          <div className="w-9 h-9 rounded-full bg-brand-gold text-[#2C1E04] font-bold text-sm flex items-center justify-center shadow">
             ST
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
         {/* Welcome & Overview Header */}
-        <div className="bg-gradient-to-r from-[#0d2a20] via-[#0f3327] to-[#123e30] border border-[#204a3b] rounded-2xl p-6 sm:p-8 mb-8 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-          
+        <div className="bg-panel border border-chalk-faint rounded-2xl p-5 sm:p-8 mb-6 sm:mb-8 relative overflow-hidden">
           <div className="relative z-10">
-            <span className="inline-block text-xs font-bold uppercase tracking-wider text-[#f5b91e] px-2.5 py-1 rounded-md bg-[#184233] border border-[#275d49] mb-3">
+            <span className="inline-block text-[11px] font-bold uppercase tracking-wider text-brand-gold px-2.5 py-1 rounded-lg bg-brand-gold-soft border border-brand-gold/20 mb-3">
               Student Tests Hub
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Ready to challenge your knowledge?
-            </h2>
-            <p className="text-[#a4c2b5] text-sm sm:text-base mt-2 max-w-2xl">
-              Browse available national mock tests, topic-specific practice assessments, and paid certified exams. Track your completed scores and review detailed answers.
+            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl text-chalk tracking-tight">
+              Test Your Knowledge & Track Progress
+            </h1>
+            <p className="text-chalk-muted text-xs sm:text-sm md:text-base mt-2 max-w-2xl leading-relaxed">
+              Browse available mock assessments, topic practice tests, and certified examinations. Attempt tests with immediate evaluation and detailed scorecards.
             </p>
 
             {/* Quick Stats Banner */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-              <div className="bg-[#0b211a]/80 border border-[#1b3f32] rounded-xl p-4">
-                <div className="text-xs text-[#8ca89c] font-medium">Available Tests</div>
-                <div className="text-2xl font-black text-white mt-1">{stats.total}</div>
+            <div className="grid grid-cols-1 gap-3 mb-4">
+              <div className="bg-panel-2 border border-chalk-faint rounded-xl p-3">
+                <div className="text-xs text-chalk-muted font-medium">Available Tests</div>
+                <div className="text-lg font-semibold text-chalk mt-1">{stats.total}</div>
               </div>
-              <div className="bg-[#0b211a]/80 border border-[#1b3f32] rounded-xl p-4">
-                <div className="text-xs text-[#8ca89c] font-medium">Completed</div>
-                <div className="text-2xl font-black text-emerald-400 mt-1">{stats.completedCount}</div>
+              <div className="bg-panel-2 border border-chalk-faint rounded-xl p-3">
+                <div className="text-xs text-chalk-muted font-medium">Completed</div>
+                <div className="text-lg font-semibold text-success mt-1">{stats.completedCount}</div>
               </div>
-              <div className="bg-[#0b211a]/80 border border-[#1b3f32] rounded-xl p-4">
-                <div className="text-xs text-[#8ca89c] font-medium">Not Attempted</div>
-                <div className="text-2xl font-black text-[#f5b91e] mt-1">{stats.notAttemptedCount}</div>
+              <div className="bg-panel-2 border border-chalk-faint rounded-xl p-3">
+                <div className="text-xs text-chalk-muted font-medium">Not Attempted</div>
+                <div className="text-lg font-semibold text-brand-gold mt-1">{stats.notAttemptedCount}</div>
               </div>
-              <div className="bg-[#0b211a]/80 border border-[#1b3f32] rounded-xl p-4">
-                <div className="text-xs text-[#8ca89c] font-medium">Average Score</div>
-                <div className="text-2xl font-black text-cyan-300 mt-1">{stats.avgScore}%</div>
+              <div className="bg-panel-2 border border-chalk-faint rounded-xl p-3">
+                <div className="text-xs text-chalk-muted font-medium">Average Score</div>
+                <div className="text-lg font-semibold text-chalk mt-1">{stats.avgScore}%</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Controls Section: Search & Filters */}
-        <div className="bg-[#0c261e] border border-[#1a4032] rounded-xl p-4 mb-6 shadow-md flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+        <div className="bg-panel border border-chalk-faint rounded-2xl p-4 mb-6 flex flex-col gap-4">
           {/* Tabs */}
-          <div className="flex flex-wrap items-center gap-2 border-b md:border-b-0 border-[#1a4032] pb-3 md:pb-0">
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-chalk-faint pb-2">
             {[
               { key: "all", label: "All Tests" },
               { key: "free", label: "Free" },
@@ -161,10 +164,10 @@ export default function StudentDashboard({
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
                   activeTab === tab.key
-                    ? "bg-[#e31b23] text-white shadow-md shadow-red-900/30"
-                    : "bg-[#071a14] text-[#9eb7ad] hover:text-white hover:bg-[#12362b] border border-[#1b3f32]"
+                    ? "bg-brand-red text-chalk shadow-sm"
+                    : "text-chalk-muted hover:text-chalk hover:bg-panel-2"
                 }`}
               >
                 {tab.label}
@@ -173,20 +176,21 @@ export default function StudentDashboard({
           </div>
 
           {/* Search Input */}
-          <div className="relative min-w-[240px]">
+          <div className="w-full">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search tests by title or topic..."
-              className="w-full bg-[#071a14] border border-[#1b3f32] rounded-lg px-3 py-2 text-xs text-white placeholder-[#688a7c] focus:outline-none focus:border-[#f5b91e]"
+              placeholder="Search tests by title or topic…"
+              className="w-full bg-panel-2 border border-chalk-faint rounded-xl pl-9 pr-8 py-2 text-xs text-chalk placeholder:text-chalk-muted/50 focus:outline-none focus:border-brand-red transition"
             />
+            <SearchIcon size={14} className="absolute left-3 top-2.5 text-chalk-muted pointer-events-none" />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-white"
+                className="absolute right-3 top-2 text-xs text-chalk-muted hover:text-chalk p-0.5"
               >
-                ✕
+                <CloseIcon size={12} />
               </button>
             )}
           </div>
@@ -195,18 +199,18 @@ export default function StudentDashboard({
         {/* Subject Filter Pills */}
         {subjects.length > 2 && (
           <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-4 text-xs">
-            <span className="text-[#7c9d90] font-medium whitespace-nowrap">Subjects:</span>
+            <span className="text-chalk-muted font-medium whitespace-nowrap">Subject:</span>
             {subjects.map((sub) => (
               <button
                 key={sub}
                 onClick={() => setSelectedSubject(sub)}
-                className={`px-2.5 py-1 rounded-md capitalize whitespace-nowrap transition-colors ${
+                className={`px-3 py-1 rounded-lg capitalize whitespace-nowrap transition ${
                   selectedSubject === sub
-                    ? "bg-[#f5b91e] text-[#071a14] font-bold"
-                    : "bg-[#0e2c22] text-[#9eb7ad] hover:text-white border border-[#1b3d30]"
+                    ? "bg-brand-gold text-[#2C1E04] font-bold"
+                    : "bg-panel-2 text-chalk-muted hover:text-chalk border border-chalk-faint"
                 }`}
               >
-                {sub === "all" ? "All Subjects" : sub}
+                {sub === "all" ? "All Domains" : sub}
               </button>
             ))}
           </div>
@@ -214,11 +218,10 @@ export default function StudentDashboard({
 
         {/* Tests Grid */}
         {filteredTests.length === 0 ? (
-          <div className="bg-[#0b231b] border border-[#1a4032] rounded-2xl p-12 text-center text-[#8ca89c]">
-            <div className="text-4xl mb-3">🔍</div>
-            <h3 className="text-lg font-bold text-white">No tests match your filter</h3>
-            <p className="text-xs text-[#8ca89c] mt-1 max-w-sm mx-auto">
-              Try switching your tab, clearing your search keywords, or selecting "All Subjects" to see other tests.
+          <div className="bg-panel border border-chalk-faint rounded-2xl p-12 text-center text-chalk-muted">
+            <h3 className="text-base font-semibold text-chalk">No tests match your filter</h3>
+            <p className="text-xs text-chalk-muted mt-1 max-w-sm mx-auto">
+              Try switching tabs, clearing search keywords, or selecting another subject.
             </p>
             <button
               onClick={() => {
@@ -226,13 +229,13 @@ export default function StudentDashboard({
                 setSelectedSubject("all");
                 setSearchQuery("");
               }}
-              className="mt-4 px-4 py-2 rounded-lg bg-[#1a4032] hover:bg-[#255745] text-xs font-semibold text-white transition"
+              className="mt-4 px-4 py-2 rounded-xl bg-panel-2 hover:bg-panel-3 border border-chalk-faint text-xs font-semibold text-chalk transition"
             >
               Reset Filters
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {filteredTests.map((test) => {
               const testId = String(test.id || test._id);
               const isPaid = Boolean(test.is_paid || test.isPaid);
@@ -244,104 +247,106 @@ export default function StudentDashboard({
               return (
                 <div
                   key={testId}
-                  className="bg-[#0b221a] border border-[#1b3f32] rounded-2xl p-5 hover:border-[#2f6652] hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between"
+                  className="bg-panel border border-chalk-faint rounded-2xl p-5 sm:p-6 hover:border-chalk-muted/30 transition flex flex-col justify-between"
                 >
                   <div>
                     {/* Badges Row */}
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      {/* Classification Badge: Free vs Paid */}
                       {isPaid ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800/60 shadow-sm">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-gold-soft text-brand-gold border border-brand-gold/30">
                           {isPurchased ? (
                             <>
-                              <span>✓</span> Purchased
+                              <CheckIcon size={12} />
+                              <span>Purchased</span>
                             </>
                           ) : (
                             <>
-                              <span>🔒</span> Paid • ₹{test.price || 499}
+                              <LockIcon size={12} />
+                              <span>Paid • ₹{test.price || 499}</span>
                             </>
                           )}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 shadow-sm">
-                          <span>🎁</span> Free Test
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-success-soft text-success border border-success/30">
+                          <GiftIcon size={12} />
+                          <span>Free Test</span>
                         </span>
                       )}
 
-                      {/* Status Badge */}
                       {isCompleted ? (
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700/60">
-                          Completed • {submission.percentage}%
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-success-soft text-success border border-success/30">
+                          Score: {submission.percentage}%
                         </span>
                       ) : (
-                        <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#112d23] text-[#8ca89c] border border-[#1f4738]">
+                        <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-panel-2 text-chalk-muted border border-chalk-faint">
                           Not Attempted
                         </span>
                       )}
                     </div>
 
                     {/* Subject Tag */}
-                    <div className="text-[11px] font-semibold tracking-wider text-[#f5b91e] uppercase mb-1.5">
-                      {test.subject || "General Awareness"}
+                    <div className="text-[11px] font-semibold tracking-wider text-chalk-muted uppercase mb-1">
+                      {test.subject || "General"}
                     </div>
 
                     {/* Test Title */}
-                    <h3 className="text-base font-bold text-white line-clamp-2 leading-snug">
+                    <h3 className="text-base font-semibold text-chalk line-clamp-2 leading-snug">
                       {test.title}
                     </h3>
 
                     {/* Description */}
-                    <p className="text-xs text-[#9eb7ad] mt-2 line-clamp-2 leading-relaxed">
-                      {test.description || "Comprehensive mock assessment designed to evaluate test readiness and core competencies."}
+                    <p className="text-xs text-chalk-muted mt-2 line-clamp-2 leading-relaxed">
+                      {test.description || "Comprehensive mock assessment designed to evaluate test readiness."}
                     </p>
 
                     {/* Test Info Badges */}
-                    <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-[#16362b] text-[11px] text-[#b0cbc0]">
-                      <div className="flex items-center gap-1">
-                        <span>⏱️</span>
-                        <span>{test.duration || 30} Mins</span>
+                    <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-chalk-faint text-[11px] text-chalk-muted">
+                      <div>
+                        <span className="text-chalk font-semibold">{test.duration || 60}</span> mins
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span>📝</span>
-                        <span>{test.total_questions || test.totalQuestions || test.questions?.length || 0} Qs</span>
+                      <div>
+                        <span className="text-chalk font-semibold">
+                          {test.total_questions || test.totalQuestions || test.questions?.length || 50}
+                        </span> Qs
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span>🎯</span>
-                        <span>+{test.marks_per_question || 1} / -{test.negative_marks || 0}</span>
+                      <div>
+                        <span className="text-chalk font-semibold">
+                          +{test.marksPerQuestion ?? test.marks_per_question ?? 1} / -{test.negativeMarks ?? test.negative_marks ?? 0}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Actions Section */}
-                  <div className="mt-5 pt-3 border-t border-[#16362b] flex items-center gap-2">
+                  {/* Actions Row */}
+                  <div className="mt-5 pt-4 border-t border-chalk-faint flex items-center justify-between gap-3">
+                    {isCompleted && (
+                      <button
+                        onClick={() => setScorecardModalTest({ test, submission })}
+                        className="px-3.5 py-2 rounded-xl bg-panel-2 hover:bg-panel-3 border border-chalk-faint text-xs font-medium text-chalk transition"
+                      >
+                        Scorecard
+                      </button>
+                    )}
+
                     {isLocked ? (
                       <button
                         onClick={() => setUnlockModalTest(test)}
-                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2"
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-gold/90 text-[#2C1E04] text-xs font-bold transition shadow-sm"
                       >
-                        <span>🔒</span> Unlock Test (₹{test.price || 499})
+                        <LockIcon size={14} />
+                        <span>Unlock Test • ₹{test.price || 499}</span>
                       </button>
-                    ) : isCompleted ? (
-                      <div className="flex w-full gap-2">
-                        <button
-                          onClick={() => setScorecardModalTest({ test, submission })}
-                          className="flex-1 py-2 px-3 rounded-xl bg-[#14362a] hover:bg-[#1d4c3b] border border-[#295a47] text-white font-semibold text-xs transition text-center"
-                        >
-                          View Scorecard
-                        </button>
-                        <button
-                          onClick={() => onStartTest(test)}
-                          className="flex-1 py-2 px-3 rounded-xl bg-[#e31b23] hover:bg-[#c9181f] text-white font-bold text-xs shadow transition text-center"
-                        >
-                          Retake Test
-                        </button>
-                      </div>
                     ) : (
                       <button
                         onClick={() => onStartTest(test)}
-                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#e31b23] to-[#ef4444] hover:from-[#c9181f] hover:to-[#dc2626] text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2"
+                        className={`inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition ${
+                          isCompleted
+                            ? "flex-1 bg-panel-2 hover:bg-panel-3 text-chalk border border-chalk-faint"
+                            : "w-full bg-brand-red hover:bg-brand-red-dark text-chalk shadow-sm"
+                        }`}
                       >
-                        <span>🚀</span> Start Test Now
+                        <span>{isCompleted ? "Retake Test" : "Start Test"}</span>
+                        <ArrowRightIcon size={13} />
                       </button>
                     )}
                   </div>
@@ -355,53 +360,56 @@ export default function StudentDashboard({
       {/* Unlock / Purchase Simulation Modal */}
       {unlockModalTest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#0b231b] border border-[#275846] rounded-2xl max-w-md w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1b3f32]">
-              <h4 className="text-base font-bold flex items-center gap-2 text-purple-300">
-                <span>🔒</span> Unlock Premium Test
+          <div className="bg-panel border border-chalk-faint rounded-2xl max-w-md w-full p-5 sm:p-6 text-chalk shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-chalk-faint">
+              <h4 className="text-base font-semibold flex items-center gap-2 text-brand-gold">
+                <LockIcon size={16} />
+                <span>Unlock Premium Assessment</span>
               </h4>
               <button
                 onClick={() => setUnlockModalTest(null)}
-                className="text-gray-400 hover:text-white text-lg"
+                className="text-chalk-muted hover:text-chalk p-1"
               >
-                ✕
+                <CloseIcon size={18} />
               </button>
             </div>
 
-            <div className="mt-4">
-              <h5 className="font-bold text-lg text-white">{unlockModalTest.title}</h5>
-              <p className="text-xs text-[#a4c2b5] mt-1">{unlockModalTest.description}</p>
+            <div className="mt-4 space-y-4">
+              <div>
+                <h5 className="font-semibold text-base text-chalk">{unlockModalTest.title}</h5>
+                <p className="text-xs text-chalk-muted mt-1">{unlockModalTest.description}</p>
+              </div>
 
-              <div className="bg-[#071a14] border border-[#1b3f32] rounded-xl p-3 mt-4 space-y-2 text-xs">
-                <div className="flex justify-between text-[#b0cbc0]">
+              <div className="bg-panel-2 border border-chalk-faint rounded-xl p-3.5 space-y-2 text-xs">
+                <div className="flex justify-between text-chalk-muted">
                   <span>Duration:</span>
-                  <span className="font-semibold text-white">{unlockModalTest.duration} Mins</span>
+                  <span className="font-semibold text-chalk">{unlockModalTest.duration} Mins</span>
                 </div>
-                <div className="flex justify-between text-[#b0cbc0]">
+                <div className="flex justify-between text-chalk-muted">
                   <span>Total Questions:</span>
-                  <span className="font-semibold text-white">
+                  <span className="font-semibold text-chalk">
                     {unlockModalTest.total_questions || unlockModalTest.questions?.length || 0} Questions
                   </span>
                 </div>
-                <div className="flex justify-between text-[#b0cbc0]">
-                  <span>Subject:</span>
-                  <span className="font-semibold text-[#f5b91e]">{unlockModalTest.subject}</span>
+                <div className="flex justify-between text-chalk-muted">
+                  <span>Domain / Subject:</span>
+                  <span className="font-semibold text-brand-gold">{unlockModalTest.subject}</span>
                 </div>
-                <div className="flex justify-between text-[#b0cbc0] pt-2 border-t border-[#1b3f32] text-sm">
-                  <span className="font-bold text-white">Price:</span>
-                  <span className="font-extrabold text-purple-300">₹{unlockModalTest.price || 499}</span>
+                <div className="flex justify-between text-chalk-muted pt-2 border-t border-chalk-faint text-sm">
+                  <span className="font-semibold text-chalk">Access Fee:</span>
+                  <span className="font-bold text-brand-gold">₹{unlockModalTest.price || 499}</span>
                 </div>
               </div>
 
-              <div className="mt-4 text-xs text-[#8ca89c] bg-[#112d23] p-3 rounded-lg border border-[#1c4737]">
-                ✨ <strong>Included:</strong> Full performance analytics, detailed answer keys with explanations, and official Dexmy completion score.
+              <div className="text-xs text-chalk-muted bg-panel-2/60 p-3 rounded-xl border border-chalk-faint">
+                Includes full attempt access, candidate performance analytics, and complete answer keys.
               </div>
             </div>
 
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setUnlockModalTest(null)}
-                className="flex-1 py-2.5 rounded-xl border border-[#275846] bg-[#0e2c22] hover:bg-[#163e30] text-xs font-semibold text-gray-300 transition"
+                className="flex-1 py-2.5 rounded-xl border border-chalk-faint bg-panel-2 hover:bg-panel-3 text-xs font-medium text-chalk transition"
               >
                 Cancel
               </button>
@@ -410,7 +418,7 @@ export default function StudentDashboard({
                   onUnlockTest(unlockModalTest);
                   setUnlockModalTest(null);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition"
+                className="flex-1 py-2.5 rounded-xl bg-brand-gold hover:bg-brand-gold/90 text-xs font-bold text-[#2C1E04] shadow transition"
               >
                 Verify &amp; Unlock
               </button>
@@ -422,61 +430,62 @@ export default function StudentDashboard({
       {/* Scorecard Modal */}
       {scorecardModalTest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-[#0b231b] border border-[#275846] rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1b3f32]">
-              <h4 className="text-base font-bold flex items-center gap-2 text-emerald-300">
-                <span>🏆</span> Test Performance Scorecard
+          <div className="bg-panel border border-chalk-faint rounded-2xl max-w-lg w-full p-5 sm:p-6 text-chalk shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-chalk-faint">
+              <h4 className="text-base font-semibold flex items-center gap-2 text-chalk">
+                <TrophyIcon size={18} className="text-brand-gold" />
+                <span>Assessment Performance Scorecard</span>
               </h4>
               <button
                 onClick={() => setScorecardModalTest(null)}
-                className="text-gray-400 hover:text-white text-lg"
+                className="text-chalk-muted hover:text-chalk p-1"
               >
-                ✕
+                <CloseIcon size={18} />
               </button>
             </div>
 
             <div className="mt-4">
-              <h5 className="font-bold text-lg text-white">{scorecardModalTest.test?.title}</h5>
-              <div className="text-xs text-[#8ca89c] mt-0.5">
+              <h5 className="font-semibold text-base text-chalk">{scorecardModalTest.test?.title}</h5>
+              <div className="text-xs text-chalk-muted mt-0.5">
                 Submitted on: {new Date(scorecardModalTest.submission.createdAt || Date.now()).toLocaleString()}
               </div>
 
               {/* Score Highlight Box */}
-              <div className="mt-4 bg-gradient-to-br from-[#071a14] to-[#0c2e22] border border-[#1b3f32] rounded-xl p-5 text-center">
-                <div className="text-3xl font-black text-emerald-400">
+              <div className="mt-4 bg-panel-2 border border-chalk-faint rounded-xl p-5 text-center">
+                <div className="text-4xl font-semibold text-success">
                   {scorecardModalTest.submission.percentage}%
                 </div>
-                <div className="text-xs font-semibold text-[#8ca89c] uppercase tracking-wider mt-1">
-                  Final Score
+                <div className="text-xs font-semibold text-chalk-muted uppercase tracking-wider mt-1">
+                  Overall Score
                 </div>
-                <div className="text-sm font-bold text-white mt-2">
+                <div className="text-sm font-semibold text-chalk mt-2">
                   {scorecardModalTest.submission.obtainedMarks} / {scorecardModalTest.submission.totalMarks} Marks Obtained
                 </div>
               </div>
 
               {/* Breakdown Grid */}
               <div className="grid grid-cols-4 gap-2 mt-4 text-center text-xs">
-                <div className="bg-[#071a14] border border-[#1b3f32] p-2.5 rounded-lg">
-                  <div className="text-gray-400 text-[10px]">Total Qs</div>
-                  <div className="text-base font-bold text-white mt-0.5">
+                <div className="bg-panel-2 border border-chalk-faint p-2.5 rounded-xl">
+                  <div className="text-chalk-muted text-[10px]">Total Qs</div>
+                  <div className="text-sm font-semibold text-chalk mt-0.5">
                     {scorecardModalTest.submission.totalQuestions}
                   </div>
                 </div>
-                <div className="bg-[#071a14] border border-[#1b3f32] p-2.5 rounded-lg">
-                  <div className="text-emerald-400 text-[10px]">Correct</div>
-                  <div className="text-base font-bold text-emerald-400 mt-0.5">
+                <div className="bg-panel-2 border border-chalk-faint p-2.5 rounded-xl">
+                  <div className="text-success text-[10px]">Correct</div>
+                  <div className="text-sm font-semibold text-success mt-0.5">
                     {scorecardModalTest.submission.correct}
                   </div>
                 </div>
-                <div className="bg-[#071a14] border border-[#1b3f32] p-2.5 rounded-lg">
-                  <div className="text-red-400 text-[10px]">Incorrect</div>
-                  <div className="text-base font-bold text-red-400 mt-0.5">
+                <div className="bg-panel-2 border border-chalk-faint p-2.5 rounded-xl">
+                  <div className="text-brand-red text-[10px]">Incorrect</div>
+                  <div className="text-sm font-semibold text-brand-red mt-0.5">
                     {scorecardModalTest.submission.incorrect}
                   </div>
                 </div>
-                <div className="bg-[#071a14] border border-[#1b3f32] p-2.5 rounded-lg">
-                  <div className="text-amber-400 text-[10px]">Unattempted</div>
-                  <div className="text-base font-bold text-amber-400 mt-0.5">
+                <div className="bg-panel-2 border border-chalk-faint p-2.5 rounded-xl">
+                  <div className="text-brand-gold text-[10px]">Unattempted</div>
+                  <div className="text-sm font-semibold text-brand-gold mt-0.5">
                     {scorecardModalTest.submission.notAnswered}
                   </div>
                 </div>
@@ -486,7 +495,7 @@ export default function StudentDashboard({
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setScorecardModalTest(null)}
-                className="flex-1 py-2.5 rounded-xl border border-[#275846] bg-[#0e2c22] hover:bg-[#163e30] text-xs font-semibold text-gray-300 transition"
+                className="flex-1 py-2.5 rounded-xl border border-chalk-faint bg-panel-2 hover:bg-panel-3 text-xs font-medium text-chalk transition"
               >
                 Close
               </button>
@@ -496,9 +505,10 @@ export default function StudentDashboard({
                   setScorecardModalTest(null);
                   onStartTest(testToStart);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-[#e31b23] hover:bg-[#c9181f] text-xs font-bold text-white shadow transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-brand-red hover:bg-brand-red-dark text-xs font-semibold text-chalk shadow transition"
               >
-                Retake Test
+                <span>Retake Test</span>
+                <ArrowRightIcon size={13} />
               </button>
             </div>
           </div>

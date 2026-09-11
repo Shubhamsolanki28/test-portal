@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import TeacherLayout from "../components/TeacherLayout";
 import { fetchWithAuth } from "../src/api";
+import { ArrowLeftIcon, ArrowRightIcon, PlusIcon } from "../components/Icons";
 
 function CreateExam() {
   const navigate = useNavigate();
@@ -10,8 +11,8 @@ function CreateExam() {
     description: "",
     subject: "",
     duration: "",
-    marksPerQuestion: "",
-    negativeMarks: "",
+    marksPerQuestion: "1",
+    negativeMarks: "0",
     isPaid: false,
     price: "",
   });
@@ -22,18 +23,17 @@ function CreateExam() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
-    setFormData((previous) => ({
-      ...previous,
+    setFormData((prev) => ({
+      ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
     setMessage("");
+    setSuccessMessage("");
 
     try {
       const payload = {
@@ -66,40 +66,17 @@ function CreateExam() {
         throw new Error(data.message || "Failed to create test");
       }
 
-      setMessage("Test created successfully!");
-      // Create notification
-      const existingNotifications =
-        JSON.parse(localStorage.getItem("teacherNotifications")) || [];
-
-      const newNotification = {
-        id: Date.now(),
-        type: "success",
-        title: "Test created successfully",
-        description: `${formData.title} has been created successfully.`,
-        time: "Just now",
-        createdAt: new Date().toISOString(),
-      };
-
-      localStorage.setItem(
-        "teacherNotifications",
-        JSON.stringify([
-          newNotification,
-          ...existingNotifications,
-        ])
-      );
-
-      setFormData({
-        title: "",
-        description: "",
-        subject: "",
-        duration: "",
-        marksPerQuestion: "",
-        negativeMarks: "",
-      });
-
       setSuccessMessage("Test created successfully!");
-    } catch (error) {
-      setMessage(error.message);
+      const createdId = data.test?.id || data.test?._id;
+      setTimeout(() => {
+        if (createdId) {
+          navigate(`/test-creator/tests/${createdId}/questions`);
+        } else {
+          navigate("/test-creator/tests");
+        }
+      }, 800);
+    } catch (err) {
+      setMessage(err.message || "Something went wrong while creating the test");
     } finally {
       setLoading(false);
     }
@@ -107,85 +84,60 @@ function CreateExam() {
 
   return (
     <TeacherLayout>
-      <div className="min-h-[calc(100vh-64px)] bg-[#f4f5f3] px-5 py-7 lg:px-8 lg:py-8">
-
-        <div className="max-w-7xl mx-auto">
-
-          {/* PAGE HEADER */}
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-7">
-
-            <div>
-              <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-[#d99b00] mb-2">
-                Assessment Management
-              </p>
-
-              <h1 className="text-[28px] lg:text-[30px] font-bold tracking-tight text-[#0b211a]">
-                Create Test
-              </h1>
-
-              <p className="mt-1.5 text-[14px] text-[#66756e]">
-                Create and configure a new assessment for your students.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/exams")}
-              className="self-start sm:self-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[#cbd6d1] bg-white text-[#0b5968] text-sm font-semibold hover:bg-[#eef5f2] hover:border-[#0b5968] transition-all duration-200"
-            >
-              ← My Exams
-            </button>
-
+      <div className="flex-1 flex flex-col min-w-0 bg-void text-chalk">
+        {/* Header */}
+        <div className="border-b border-chalk-faint px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-chalk-muted opacity-60">
+              Assessment Management
+            </p>
+            <h1 className="mt-1 font-display text-2xl sm:text-3xl tracking-tight text-chalk">
+              Create Test
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-chalk-muted">
+              Configure parameters, duration and pricing for your new assessment.
+            </p>
           </div>
 
+          <Link
+            to="/test-creator/tests"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-panel-2 hover:bg-panel-3 border border-chalk-faint px-4 py-2 text-xs sm:text-sm font-medium text-chalk transition self-start sm:self-auto"
+          >
+            <ArrowLeftIcon size={14} />
+            <span>Back to Tests</span>
+          </Link>
+        </div>
 
-          {/* MAIN GRID */}
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6">
+        {/* Form Body */}
+        <div className="flex-1 overflow-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-7">
+          <div className="max-w-5xl mx-auto">
+            {message && (
+              <div className="mb-6 rounded-xl border border-brand-red/30 bg-brand-red/10 px-4 sm:px-5 py-3 text-sm text-brand-red">
+                {message}
+              </div>
+            )}
+            {successMessage && (
+              <div className="mb-6 rounded-xl border border-success/30 bg-success-soft px-4 sm:px-5 py-3 text-sm text-success">
+                {successMessage}
+              </div>
+            )}
 
-
-            {/* FORM CARD */}
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white border border-[#dce3df] rounded-2xl shadow-[0_4px_20px_rgba(11,33,26,0.05)] overflow-hidden"
-            >
-
-              {/* CARD HEADER */}
-              <div className="px-6 py-5 border-b border-[#e5eae7] bg-[#fbfcfb]">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="w-10 h-10 rounded-xl bg-[#fff4cf] border border-[#f5d36b] flex items-center justify-center">
-                    <span className="text-[#0b211a] text-lg font-bold">
-                      +
-                    </span>
-                  </div>
-
-                  <div>
-                    <h2 className="text-[17px] font-bold text-[#0b211a]">
-                      Exam Information
-                    </h2>
-
-                    <p className="text-xs text-[#718079] mt-0.5">
-                      Add the basic details of your examination.
-                    </p>
-                  </div>
-
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Form Column (2 cols) */}
+              <form
+                onSubmit={handleSubmit}
+                className="lg:col-span-2 rounded-2xl border border-chalk-faint bg-panel p-5 sm:p-7 space-y-5 sm:space-y-6"
+              >
+                <div>
+                  <h2 className="text-base font-semibold text-chalk">Exam Information</h2>
+                  <p className="text-xs text-chalk-muted mt-0.5">Basic details shown to candidates</p>
                 </div>
 
-              </div>
-
-
-              {/* FORM BODY */}
-              <div className="p-6 lg:p-7">
-
-                {/* TITLE */}
-                <div className="mb-6">
-
-                  <label className="block text-[13px] font-semibold text-[#18362d] mb-2">
-                    Exam Title
-                    <span className="text-[#d99b00] ml-1">*</span>
+                {/* Title */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-chalk-muted mb-2">
+                    Test Title <span className="text-brand-red">*</span>
                   </label>
-
                   <input
                     type="text"
                     name="title"
@@ -193,159 +145,106 @@ function CreateExam() {
                     onChange={handleChange}
                     placeholder="e.g. CUET PG General Awareness Mock Test"
                     required
-                    className="w-full h-12 rounded-lg border border-[#ccd7d2] bg-white px-4 text-[14px] text-[#102a25] placeholder:text-[#98a49f] outline-none transition-all duration-200 focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 hover:border-[#aebdb6]"
+                    className="w-full h-11 rounded-xl border border-chalk-faint bg-panel-2 px-4 text-sm text-chalk placeholder:text-chalk-muted/50 focus:border-brand-red focus:outline-none transition"
                   />
-
                 </div>
 
-
-                {/* SUBJECT */}
-                <div className="mb-6">
-
-                  <label className="block text-[13px] font-semibold text-[#18362d] mb-2">
-                    Subject
-                    <span className="text-[#d99b00] ml-1">*</span>
+                {/* Subject */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-chalk-muted mb-2">
+                    Subject / Domain <span className="text-brand-red">*</span>
                   </label>
-
                   <input
                     type="text"
                     name="subject"
                     value={formData.subject}
                     onChange={handleChange}
-                    placeholder="e.g. General Awareness"
+                    placeholder="e.g. Quantitative Aptitude"
                     required
-                    className="w-full h-12 rounded-lg border border-[#ccd7d2] bg-white px-4 text-[14px] text-[#102a25] placeholder:text-[#98a49f] outline-none transition-all duration-200 focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 hover:border-[#aebdb6]"
+                    className="w-full h-11 rounded-xl border border-chalk-faint bg-panel-2 px-4 text-sm text-chalk placeholder:text-chalk-muted/50 focus:border-brand-red focus:outline-none transition"
                   />
-
                 </div>
 
-
-                {/* DESCRIPTION */}
-                <div className="mb-7">
-
-                  <label className="block text-[13px] font-semibold text-[#18362d] mb-2">
-                    Description
-                    <span className="font-normal text-[#8a9691] ml-1">
-                      (optional)
-                    </span>
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-chalk-muted mb-2">
+                    Description <span className="text-chalk-muted/50 font-normal lowercase">(optional)</span>
                   </label>
-
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    placeholder="Enter a short description about this exam..."
-                    rows="4"
-                    className="w-full min-h-[115px] resize-none rounded-lg border border-[#ccd7d2] bg-white px-4 py-3 text-[14px] leading-6 text-[#102a25] placeholder:text-[#98a49f] outline-none transition-all duration-200 focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 hover:border-[#aebdb6]"
+                    rows="3"
+                    placeholder="Brief instructions or topics covered in this assessment…"
+                    className="w-full rounded-xl border border-chalk-faint bg-panel-2 px-4 py-3 text-sm text-chalk placeholder:text-chalk-muted/50 focus:border-brand-red focus:outline-none transition resize-none"
                   />
-
                 </div>
 
+                {/* Configuration Section */}
+                <div className="pt-5 border-t border-chalk-faint">
+                  <h3 className="text-sm font-semibold text-chalk mb-4">Exam Configuration</h3>
 
-                {/* DIVIDER */}
-                <div className="border-t border-[#e5eae7] mb-6" />
-
-
-                {/* CONFIGURATION HEADER */}
-                <div className="mb-5">
-
-                  <h3 className="text-[16px] font-bold text-[#0b211a]">
-                    Test Configuration
-                  </h3>
-
-                  <p className="text-xs text-[#718079] mt-1">
-                    Configure duration and marking scheme.
-                  </p>
-
-                </div>
-
-
-                {/* DURATION / MARKS / NEGATIVE */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
-
-                  {/* DURATION */}
-                  <div>
-
-                    <label className="block text-[13px] font-semibold text-[#18362d] mb-2">
-                      Duration
-                      <span className="text-[#8a9691] font-normal ml-1">
-                        (minutes)
-                      </span>
-                    </label>
-
-                    <div className="relative">
-
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Duration */}
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-chalk-muted mb-2">
+                        Duration (mins) <span className="text-brand-red">*</span>
+                      </label>
                       <input
                         type="number"
                         name="duration"
                         value={formData.duration}
                         onChange={handleChange}
-                        placeholder="120"
+                        placeholder="60"
                         min="1"
                         required
-                        className="w-full h-12 rounded-lg border border-[#ccd7d2] bg-white px-4 pr-16 text-[14px] text-[#102a25] placeholder:text-[#98a49f] outline-none focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 transition-all"
+                        className="w-full h-11 rounded-xl border border-chalk-faint bg-panel-2 px-4 text-sm text-chalk placeholder:text-chalk-muted/50 focus:border-brand-red focus:outline-none transition"
                       />
-
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#8a9691]">
-                        min
-                      </span>
-
                     </div>
 
+                    {/* Marks Per Question */}
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-chalk-muted mb-2">
+                        Marks / Q <span className="text-brand-red">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        name="marksPerQuestion"
+                        value={formData.marksPerQuestion}
+                        onChange={handleChange}
+                        placeholder="1"
+                        min="0.5"
+                        step="0.5"
+                        required
+                        className="w-full h-11 rounded-xl border border-chalk-faint bg-panel-2 px-4 text-sm text-chalk placeholder:text-chalk-muted/50 focus:border-brand-red focus:outline-none transition"
+                      />
+                    </div>
+
+                    {/* Negative Marks */}
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-chalk-muted mb-2">
+                        Negative Marks
+                      </label>
+                      <input
+                        type="number"
+                        name="negativeMarks"
+                        value={formData.negativeMarks}
+                        onChange={handleChange}
+                        placeholder="0.25"
+                        min="0"
+                        step="0.25"
+                        className="w-full h-11 rounded-xl border border-chalk-faint bg-panel-2 px-4 text-sm text-chalk placeholder:text-chalk-muted/50 focus:border-brand-red focus:outline-none transition"
+                      />
+                    </div>
                   </div>
-
-
-                  {/* MARKS */}
-                  <div>
-
-                    <label className="block text-[13px] font-semibold text-[#18362d] mb-2">
-                      Marks / Question
-                    </label>
-
-                    <input
-                      type="number"
-                      name="marksPerQuestion"
-                      value={formData.marksPerQuestion}
-                      onChange={handleChange}
-                      placeholder="4"
-                      min="0"
-                      required
-                      className="w-full h-12 rounded-lg border border-[#ccd7d2] bg-white px-4 text-[14px] text-[#102a25] placeholder:text-[#98a49f] outline-none focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 transition-all"
-                    />
-
-                  </div>
-
-
-                  {/* NEGATIVE */}
-                  <div>
-
-                    <label className="block text-[13px] font-semibold text-[#18362d] mb-2">
-                      Negative Marks
-                    </label>
-
-                    <input
-                      type="number"
-                      name="negativeMarks"
-                      value={formData.negativeMarks}
-                      onChange={handleChange}
-                      placeholder="1"
-                      min="0"
-                      step="0.25"
-                      required
-                      className="w-full h-12 rounded-lg border border-[#ccd7d2] bg-white px-4 text-[14px] text-[#102a25] placeholder:text-[#98a49f] outline-none focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 transition-all"
-                    />
-
-                  </div>
-
                 </div>
 
-
-                {/* PRICING CONFIGURATION (FREE VS PAID) */}
-                <div className="bg-[#f7f9f8] border border-[#d7dfda] rounded-xl p-4 mb-7">
+                {/* Pricing Section */}
+                <div className="pt-5 border-t border-chalk-faint space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-bold text-[#18362d]">Paid Test Access</p>
-                      <p className="text-xs text-[#718079] mt-0.5">Require students to purchase this test before attempting</p>
+                      <label className="text-sm font-semibold text-chalk">Paid Assessment</label>
+                      <p className="text-xs text-chalk-muted">Require payment before students can attempt</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -355,14 +254,14 @@ function CreateExam() {
                         onChange={handleChange}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0b5968]"></div>
+                      <div className="w-11 h-6 bg-panel-2 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-gold"></div>
                     </label>
                   </div>
 
                   {formData.isPaid && (
-                    <div className="mt-4 pt-4 border-t border-[#e2e8e4]">
-                      <label className="block text-[13px] font-semibold text-[#18362d] mb-1.5">
-                        Test Price (₹ INR)
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-chalk-muted mb-2">
+                        Price (INR ₹) <span className="text-brand-red">*</span>
                       </label>
                       <input
                         type="number"
@@ -372,235 +271,79 @@ function CreateExam() {
                         placeholder="499"
                         min="1"
                         required={formData.isPaid}
-                        className="w-full h-12 rounded-lg border border-[#ccd7d2] bg-white px-4 text-[14px] text-[#102a25] placeholder:text-[#98a49f] outline-none focus:border-[#0b5968] focus:ring-2 focus:ring-[#0b5968]/10 transition-all"
+                        className="w-full sm:w-1/2 h-11 rounded-xl border border-chalk-faint bg-panel-2 px-4 text-sm text-chalk placeholder:text-chalk-muted/50 focus:border-brand-red focus:outline-none transition"
                       />
                     </div>
                   )}
                 </div>
 
-
-                {/* MESSAGE */}
-                {message && (
-                  <div
-                    className={`mb-6 rounded-lg px-4 py-3 text-sm border ${message.toLowerCase().includes("success")
-                      ? "bg-[#edf8f1] border-[#b8ddc5] text-[#23613a]"
-                      : "bg-[#fff4f1] border-[#edc6bd] text-[#a13f2b]"
-                      }`}
-                  >
-                    {message}
-                  </div>
-                )}
-
-
-                {/* FORM FOOTER */}
-                <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-5 border-t border-[#e5eae7]">
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/exams")}
-                    className="px-5 py-2.5 rounded-lg border border-[#cbd6d1] bg-white text-[#31544a] text-sm font-semibold hover:bg-[#f4f7f5] hover:border-[#9eafa8] transition-all duration-200"
-                  >
-                    Cancel
-                  </button>
-
-
+                {/* Buttons */}
+                <div className="pt-6 border-t border-chalk-faint flex flex-wrap items-center gap-3">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2.5 rounded-lg bg-[#f5b91e] text-[#071a14] text-sm font-bold border border-[#e5aa09] hover:bg-[#ffca32] hover:-translate-y-[1px] hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 transition-all duration-200"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red hover:bg-brand-red-dark px-5 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-chalk transition disabled:opacity-60"
                   >
-                    {loading ? "Creating Test..." : "Create Test →"}
+                    <PlusIcon size={16} />
+                    <span>{loading ? "Creating Test…" : "Create Test & Add Questions"}</span>
                   </button>
-
+                  <button
+                    type="button"
+                    onClick={() => navigate("/test-creator/tests")}
+                    className="rounded-xl bg-panel-2 hover:bg-panel-3 border border-chalk-faint px-5 py-3 text-xs sm:text-sm font-medium text-chalk transition"
+                  >
+                    Cancel
+                  </button>
                 </div>
+              </form>
 
-              </div>
-
-            </form>
-
-
-            {/* RIGHT OVERVIEW */}
-            <aside className="space-y-5">
-
-
-              {/* OVERVIEW CARD */}
-              <div className="bg-[#0b211a] rounded-2xl overflow-hidden border border-[#29463b] shadow-[0_8px_25px_rgba(11,33,26,0.12)]">
-
-                <div className="h-1.5 bg-[#f5b91e]" />
-
-                <div className="p-5">
-
-                  <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-[#f5b91e]">
-                    Exam Overview
-                  </p>
-
-                  <h3 className="mt-1 text-lg font-bold text-[#f4efe3]">
-                    Review your setup
-                  </h3>
-
-                  <p className="mt-1.5 text-xs leading-5 text-[#a9bbb4]">
-                    Make sure the exam details and marking scheme are correct before creating it.
-                  </p>
-
-
-                  {/* PREVIEW */}
-                  <div className="mt-5 rounded-xl bg-[#102b22] border border-[#29463b] p-4">
-
-                    <div className="flex items-center gap-3">
-
-                      <div className="w-10 h-10 rounded-lg bg-[#f5b91e] text-[#071a14] flex items-center justify-center font-bold">
-                        +
-                      </div>
-
-                      <div className="min-w-0">
-
-                        <p className="text-[10px] uppercase tracking-wider text-[#91aaa0]">
-                          Exam
-                        </p>
-
-                        <p className="text-sm font-semibold text-[#f4efe3] truncate">
-                          {formData.title || "Untitled Exam"}
-                        </p>
-
-                      </div>
-
+              {/* Sidebar Checklist (1 col) */}
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-chalk-faint bg-panel p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold text-chalk mb-3">Workflow</h3>
+                  <div className="space-y-3 text-xs text-chalk-muted">
+                    <div className="flex items-start gap-2.5">
+                      <span className="w-5 h-5 rounded-full bg-brand-red-soft text-brand-red flex items-center justify-center font-bold text-[10px] shrink-0">
+                        1
+                      </span>
+                      <span>Configure test title, duration, and marking scheme.</span>
                     </div>
-
-
-                    {/* DETAILS */}
-                    <div className="mt-5 space-y-3">
-
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-[#91aaa0]">
-                          Subject
-                        </span>
-
-                        <span className="text-xs font-semibold text-[#f4efe3] truncate max-w-[150px]">
-                          {formData.subject || "Not specified"}
-                        </span>
-                      </div>
-
-
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-[#91aaa0]">
-                          Duration
-                        </span>
-
-                        <span className="text-xs font-semibold text-[#f4efe3]">
-                          {formData.duration
-                            ? `${formData.duration} min`
-                            : "Not specified"}
-                        </span>
-                      </div>
-
-
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-[#91aaa0]">
-                          Marks
-                        </span>
-
-                        <span className="text-xs font-semibold text-[#f4efe3]">
-                          {formData.marksPerQuestion
-                            ? `+${formData.marksPerQuestion}`
-                            : "Not specified"}
-                        </span>
-                      </div>
-
-
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-[#91aaa0]">
-                          Negative
-                        </span>
-
-                        <span className="text-xs font-semibold text-[#f4efe3]">
-                          {formData.negativeMarks
-                            ? `-${formData.negativeMarks}`
-                            : "Not specified"}
-                        </span>
-                      </div>
-
+                    <div className="flex items-start gap-2.5">
+                      <span className="w-5 h-5 rounded-full bg-panel-2 text-chalk-muted flex items-center justify-center font-bold text-[10px] shrink-0">
+                        2
+                      </span>
+                      <span>Select or add questions from your question repository.</span>
                     </div>
-
+                    <div className="flex items-start gap-2.5">
+                      <span className="w-5 h-5 rounded-full bg-panel-2 text-chalk-muted flex items-center justify-center font-bold text-[10px] shrink-0">
+                        3
+                      </span>
+                      <span>Preview candidate experience & publish test.</span>
+                    </div>
                   </div>
-
-
-                  {/* STATUS */}
-                  <div className="mt-4 flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[#17372b] border border-[#315444]">
-
-                    <span className="w-2 h-2 rounded-full bg-[#f5b91e]" />
-
-                    <span className="text-xs font-medium text-[#dce8e3]">
-                      New exam will be created as Draft
-                    </span>
-
-                  </div>
-
                 </div>
 
+                <div className="rounded-2xl border border-chalk-faint bg-panel p-5 sm:p-6">
+                  <h3 className="text-sm font-semibold text-chalk mb-2">Need Questions First?</h3>
+                  <p className="text-xs text-chalk-muted leading-relaxed mb-4">
+                    You can add questions to your central question bank before or after creating this test.
+                  </p>
+                  <Link
+                    to="/test-creator/questions/add"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-gold hover:underline"
+                  >
+                    <PlusIcon size={14} />
+                    <span>Add to Question Bank</span>
+                    <ArrowRightIcon size={12} />
+                  </Link>
+                </div>
               </div>
-
-
-              {/* TIPS */}
-              <div className="bg-white border border-[#dce3df] rounded-2xl p-5 shadow-[0_4px_18px_rgba(11,33,26,0.04)]">
-
-                <div className="flex items-center gap-3 mb-4">
-
-                  <div className="w-9 h-9 rounded-lg bg-[#fff4cf] border border-[#f5d36b] flex items-center justify-center">
-                    <span className="text-[#9a6b00] font-bold">
-                      i
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-bold text-[#0b211a]">
-                      Before you create
-                    </h3>
-
-                    <p className="text-[11px] text-[#7b8983] mt-0.5">
-                      A few things to check
-                    </p>
-                  </div>
-
-                </div>
-
-
-                <div className="space-y-3">
-
-                  <div className="flex gap-2.5">
-                    <span className="text-[#f0b20b] text-sm">✓</span>
-                    <p className="text-xs leading-5 text-[#66756e]">
-                      Use a clear and descriptive exam title.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2.5">
-                    <span className="text-[#f0b20b] text-sm">✓</span>
-                    <p className="text-xs leading-5 text-[#66756e]">
-                      Verify the duration and marking scheme.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2.5">
-                    <span className="text-[#f0b20b] text-sm">✓</span>
-                    <p className="text-xs leading-5 text-[#66756e]">
-                      Questions can be added after creating the exam.
-                    </p>
-                  </div>
-
-                </div>
-
-              </div>
-
-            </aside>
-
+            </div>
           </div>
-
         </div>
-
       </div>
     </TeacherLayout>
   );
-
 }
 
 export default CreateExam;

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherLayout from "../../components/TeacherLayout";
+import { RefreshIcon, FlagIcon, CheckIcon, CloseIcon, SearchIcon, CircleIcon, ChevronDownIcon, ArrowRightIcon } from "../../components/Icons";
+import { fetchWithAuth } from "../../src/api";
 
 function StudentsReport() {
     const navigate = useNavigate();
@@ -24,8 +26,8 @@ function StudentsReport() {
             setLoading(true);
             setMessage("");
 
-            const response = await fetch(
-                "http://localhost:5000/api/question-reports"
+            const response = await fetchWithAuth(
+                "/api/question-reports"
             );
 
             const data = await response.json();
@@ -102,13 +104,10 @@ function StudentsReport() {
             setUpdatingId(reportId);
             setMessage("");
 
-            const response = await fetch(
-                `http://localhost:5000/api/question-reports/${reportId}/status`,
+            const response = await fetchWithAuth(
+                `/api/question-reports/${reportId}/status`,
                 {
                     method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
                     body: JSON.stringify({
                         status,
                     }),
@@ -314,7 +313,7 @@ function StudentsReport() {
                                 disabled={loading}
                                 className="px-4 py-2.5 rounded-lg border border-[#cbd7d1] bg-white text-[#0b5968] text-sm font-semibold hover:bg-[#eef5f2] transition disabled:opacity-50"
                             >
-                                ↻ Refresh
+                                <><RefreshIcon size={15} /> Refresh</>
                             </button>
 
                         </div>
@@ -357,7 +356,7 @@ function StudentsReport() {
                                 </div>
 
                                 <div className="w-11 h-11 rounded-xl bg-[#e8f4ed] text-[#0b5968] flex items-center justify-center text-xl">
-                                    ⚑
+                                    <FlagIcon size={14} className="text-current" />
                                 </div>
 
                             </div>
@@ -451,7 +450,7 @@ function StudentsReport() {
                                 </div>
 
                                 <div className="w-11 h-11 rounded-xl bg-[#edf3ff] text-[#2563eb] flex items-center justify-center text-xl">
-                                    ✓
+                                    <CheckIcon size={20} />
                                 </div>
 
                             </div>
@@ -498,7 +497,7 @@ function StudentsReport() {
                                 </div>
 
                                 <div className="w-11 h-11 rounded-xl bg-[#e8f6ef] text-[#16834d] flex items-center justify-center text-xl">
-                                    ✓
+                                    <CheckIcon size={20} />
                                 </div>
 
                             </div>
@@ -533,7 +532,7 @@ function StudentsReport() {
                             <div className="relative flex-1">
 
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#82918a]">
-                                    🔍
+                                    
                                 </span>
 
                                 <input
@@ -552,7 +551,7 @@ function StudentsReport() {
                             <div className="relative md:w-48">
 
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0b5968] text-sm pointer-events-none">
-                                    ◉
+                                    <CircleIcon size={14} />
                                 </span>
 
                                 <select
@@ -580,7 +579,7 @@ function StudentsReport() {
                                 </select>
 
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#687770] pointer-events-none">
-                                    ▼
+                                    <ChevronDownIcon size={14} />
                                 </span>
 
                             </div>
@@ -627,7 +626,7 @@ function StudentsReport() {
                         <div className="bg-white border border-[#dce3df] rounded-xl p-12 text-center">
 
                             <div className="w-14 h-14 mx-auto rounded-xl bg-[#edf4f0] flex items-center justify-center text-2xl">
-                                ⚑
+                                <FlagIcon size={14} className="text-current" />
                             </div>
 
                             <h2 className="text-lg font-bold text-[#0b211a] mt-4">
@@ -722,9 +721,9 @@ function StudentsReport() {
                                                     >
                                                         <span>
                                                             {status?.toLowerCase() === "resolved"
-                                                                ? "✓"
+                                                                ? <CheckIcon size={14} />
                                                                 : status?.toLowerCase() === "reviewed"
-                                                                    ? "◉"
+                                                                    ? <CircleIcon size={14} />
                                                                     : "!"}
                                                         </span>
 
@@ -812,7 +811,7 @@ function StudentsReport() {
                                                         {updatingId ===
                                                             report._id
                                                             ? "Updating..."
-                                                            : "✓ Mark Resolved"}
+                                                            : <><CheckIcon size={14} /> Mark Resolved</>}
                                                     </button>
                                                 )}
 
@@ -845,7 +844,7 @@ function StudentsReport() {
                                                 }
                                                 className="px-4 py-2 rounded-lg border border-[#b9cbc3] bg-white text-[#0b5968] text-xs font-bold hover:bg-[#eef5f2] transition"
                                             >
-                                                View Details →
+                                                View Details
                                             </button>
 
                                         </div>
@@ -895,9 +894,7 @@ function StudentsReport() {
                                         setSelectedReport(null)
                                     }
                                     className="w-9 h-9 rounded-full border border-[#3c5d50] text-[#f4efe3] flex items-center justify-center text-xl hover:bg-[#f5b91e] hover:text-[#071a14] transition"
-                                >
-                                    ×
-                                </button>
+                                ><CloseIcon size={18} /></button>
 
                             </div>
 
@@ -1057,7 +1054,7 @@ function StudentsReport() {
                                             {updatingId ===
                                                 selectedReport._id
                                                 ? "Updating..."
-                                                : "✓ Mark Resolved"}
+                                                : <><CheckIcon size={14} /> Mark Resolved</>}
                                         </button>
 
                                     )}

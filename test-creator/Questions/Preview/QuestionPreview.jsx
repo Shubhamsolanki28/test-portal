@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeftIcon, ArrowRightIcon, MinusIcon, CheckIcon } from "../../components/Icons";
 
 function QuestionPreview() {
   const { id } = useParams();
@@ -106,7 +107,7 @@ function QuestionPreview() {
             onClick={() => navigate("/questions")}
             className="mt-6 px-5 py-2.5 rounded-lg bg-[#0b211a] text-white text-sm font-semibold hover:bg-[#12352a] transition"
           >
-            ← Back to Question Bank
+            <ArrowLeftIcon size={14} /> Back to Question Bank
           </button>
 
         </div>
@@ -138,7 +139,7 @@ function QuestionPreview() {
               className="w-9 h-9 rounded-lg border border-[#36584c] text-[#f4efe3] flex items-center justify-center hover:bg-[#f5b91e] hover:text-[#071a14] hover:border-[#f5b91e] transition"
               title="Back to Question Bank"
             >
-              ←
+              <ArrowLeftIcon size={18} />
             </button>
 
             <div className="min-w-0">
@@ -370,7 +371,7 @@ function QuestionPreview() {
                   onClick={decreaseFontSize}
                   className="px-3 py-2 text-sm font-bold text-[#102a25] hover:bg-[#f1f5f2] transition"
                 >
-                  A−
+                  <><span className="text-sm font-bold">A</span><MinusIcon size={12} /></>
                 </button>
 
                 <button
@@ -440,7 +441,7 @@ function QuestionPreview() {
               onClick={() => navigate("/questions")}
               className="px-4 sm:px-5 py-2.5 rounded-lg border border-[#cbd7d1] bg-white text-[#53655e] text-sm font-semibold hover:bg-[#f2f5f3] transition"
             >
-              ← Back
+              <ArrowLeftIcon size={14} /> Back
             </button>
 
             <div className="hidden sm:block text-center">
@@ -462,7 +463,7 @@ function QuestionPreview() {
               }
               className="px-5 sm:px-7 py-2.5 rounded-lg bg-[#0b211a] text-[#f4efe3] text-sm font-bold border border-[#29463b] hover:bg-[#12352a] transition"
             >
-              Edit →
+              <><span>Edit</span> <ArrowRightIcon size={14} /></>
             </button>
 
           </div>
@@ -701,7 +702,7 @@ function QuestionPreview() {
                 <div className="flex items-start gap-3">
 
                   <div className="w-8 h-8 shrink-0 rounded-full bg-[#0b211a] flex items-center justify-center text-[#f5b91e] font-bold">
-                    ✓
+                    <CheckIcon size={16} />
                   </div>
 
                   <div>
@@ -738,7 +739,7 @@ function QuestionPreview() {
 
         <span className="w-2 h-2 rounded-full bg-[#f5b91e]" />
 
-        Teacher Preview — Correct answer is highlighted
+        Teacher Preview - Correct answer is highlighted
         in green.
 
       </div>

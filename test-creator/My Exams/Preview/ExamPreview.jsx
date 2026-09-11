@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeftIcon, ArrowRightIcon, NotepadIcon, ClockIcon, MinusIcon, CheckIcon } from "../../components/Icons";
 
 function ExamPreview() {
     const { examId } = useParams();
@@ -123,7 +124,7 @@ function ExamPreview() {
                         onClick={() => navigate("/exams")}
                         className="mt-6 px-5 py-2.5 rounded-lg bg-[#0b211a] text-white text-sm font-semibold hover:bg-[#12352a] transition"
                     >
-                        ← Back to My Exams
+                        <ArrowLeftIcon size={14} /> Back to My Exams
                     </button>
 
                 </div>
@@ -143,7 +144,7 @@ function ExamPreview() {
                 <div className="w-full max-w-lg bg-white border border-[#d8e0dc] rounded-2xl p-8 text-center shadow-sm">
 
                     <div className="w-16 h-16 mx-auto rounded-2xl bg-[#e9f2ee] flex items-center justify-center text-2xl">
-                        📝
+                        <NotepadIcon size={28} />
                     </div>
 
                     <h2 className="mt-5 text-xl font-bold text-[#0b211a]">
@@ -162,7 +163,7 @@ function ExamPreview() {
                             onClick={() => navigate("/exams")}
                             className="px-5 py-2.5 rounded-lg border border-[#b9c8c1] bg-white text-[#0b5968] text-sm font-semibold hover:bg-[#f5f8f6] transition"
                         >
-                            ← Back
+                            <ArrowLeftIcon size={14} /> Back
                         </button>
 
                         <button
@@ -210,7 +211,7 @@ function ExamPreview() {
                             className="w-9 h-9 rounded-lg border border-[#36584c] text-[#f4efe3] flex items-center justify-center hover:bg-[#f5b91e] hover:text-[#071a14] hover:border-[#f5b91e] transition"
                             title="Back to My Exams"
                         >
-                            ←
+                            <ArrowLeftIcon size={18} />
                         </button>
 
                         <div className="min-w-0">
@@ -248,7 +249,7 @@ function ExamPreview() {
                     <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg border border-[#36584c] text-[#f4efe3]">
 
                         <span className="text-[#f5b91e]">
-                            ◷
+                            <ClockIcon size={16} />
                         </span>
 
                         <span className="text-xs text-[#b9c8c1]">
@@ -511,7 +512,7 @@ function ExamPreview() {
                                     onClick={decreaseFontSize}
                                     className="px-3 py-2 text-sm font-bold text-[#102a25] hover:bg-[#f1f5f2] transition"
                                 >
-                                    A−
+                                    <><span>A</span><MinusIcon size={12} /></>
                                 </button>
 
                                 <button
@@ -596,7 +597,7 @@ function ExamPreview() {
                             disabled={currentIndex === 0}
                             className="px-4 sm:px-5 py-2.5 rounded-lg border border-[#cbd7d1] bg-white text-[#53655e] text-sm font-semibold hover:bg-[#f2f5f3] transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            ← Previous
+                            <ArrowLeftIcon size={14} /> Previous
                         </button>
 
                         {/* CURRENT */}
@@ -628,7 +629,7 @@ function ExamPreview() {
                             }
                             className="px-5 sm:px-7 py-2.5 rounded-lg bg-[#0b211a] text-[#f4efe3] text-sm font-bold border border-[#29463b] hover:bg-[#12352a] transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            Next →
+                            <><span>Next</span> <ArrowRightIcon size={14} /></>
                         </button>
 
                     </div>
@@ -878,7 +879,7 @@ function ExamPreview() {
                                 <div className="flex items-start gap-3">
 
                                     <div className="w-8 h-8 shrink-0 rounded-full bg-[#0b211a] flex items-center justify-center text-[#f5b91e] font-bold">
-                                        ✓
+                                        <CheckIcon size={16} />
                                     </div>
 
                                     <div>
@@ -915,7 +916,7 @@ function ExamPreview() {
 
                 <span className="w-2 h-2 rounded-full bg-[#f5b91e]" />
 
-                Teacher Preview — Correct answer is highlighted
+                Teacher Preview - Correct answer is highlighted
                 in green.
 
             </div>

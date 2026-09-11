@@ -1,329 +1,349 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import TeacherLayout from "../components/TeacherLayout";
 import { fetchWithAuth } from "../src/api";
+import {
+  PlusIcon,
+  TestsIcon,
+  EyeIcon,
+  EditIcon,
+  TrashIcon,
+} from "../components/Icons";
 
 function MyTests() {
-    const [tests, setTests] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [tests, setTests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-    const fetchTests = async () => {
-        try {
-            let response = await fetchWithAuth("/api/tests");
-            if (!response.ok) {
-                response = await fetchWithAuth("/api/test-creation");
-            }
+  const fetchTests = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      let response = await fetchWithAuth("/api/tests");
+      if (!response.ok) {
+        response = await fetchWithAuth("/api/test-creation");
+      }
 
-            const data = await response.json();
+      const data = await response.json();
 
-            if (data.success) {
-                setTests(data.tests || []);
-            }
-        } catch (error) {
-            console.error("Failed to fetch tests:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+      if (data.success) {
+        setTests(data.tests || []);
+      } else {
+        setError(data.message || "Failed to load tests.");
+      }
+    } catch (err) {
+      console.error("Failed to fetch tests:", err);
+      setError("Unable to connect to test server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        fetchTests();
-    }, []);
+  useEffect(() => {
+    fetchTests();
+  }, []);
 
-    return (
-        <TeacherLayout>
-            <div className="min-h-full bg-[#f7f8f5] p-6">
+  const handlePublishToggle = async (test) => {
+    try {
+      const testId = test.id || test._id;
+      let response = await fetchWithAuth(`/api/tests/${testId}/publish`, {
+        method: "PATCH",
+      });
+      if (!response.ok) {
+        response = await fetchWithAuth(`/api/test-creation/${testId}/publish`, {
+          method: "PATCH",
+        });
+      }
 
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            My Tests
-                        </h1>
+      const data = await response.json();
 
-                        <p className="text-sm text-gray-500 mt-1">
-                            Manage and monitor your created tests.
-                        </p>
-                    </div>
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to update test status");
+      }
 
-                    <button
-                        onClick={() => {
-                            window.location.href = "/create-test";
-                        }}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-5 py-2.5 rounded-lg font-semibold text-sm transition"
-                    >
-                        + Create Test
-                    </button>
-                </div>
+      setTests((prevTests) =>
+        prevTests.map((item) => {
+          const itemId = item.id || item._id;
+          if (itemId === testId) {
+            const newPub = data.test?.isPublished ?? data.test?.is_published ?? !item.isPublished;
+            return {
+              ...item,
+              isPublished: newPub,
+              is_published: newPub,
+            };
+          }
+          return item;
+        })
+      );
+    } catch (err) {
+      console.error("PUBLISH TEST ERROR:", err);
+      alert(err.message || "Failed to update test status");
+    }
+  };
 
-                {/* Loading */}
-                {loading && (
-                    <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-                        <p className="text-gray-500">
-                            Loading tests...
-                        </p>
-                    </div>
-                )}
+  const handleDelete = async (test) => {
+    const testId = test.id || test._id;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${test.title}"?`
+    );
+    if (!confirmed) return;
 
-                {/* Empty State */}
-                {!loading && tests.length === 0 && (
-                    <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
-                        <div className="w-14 h-14 mx-auto rounded-full bg-yellow-100 flex items-center justify-center text-2xl">
-                            +
+    try {
+      let response = await fetchWithAuth(`/api/tests/${testId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        response = await fetchWithAuth(`/api/test-creation/${testId}`, {
+          method: "DELETE",
+        });
+      }
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to delete test");
+      }
+
+      setTests((prev) => prev.filter((item) => (item.id || item._id) !== testId));
+    } catch (err) {
+      console.error("DELETE TEST ERROR:", err);
+      alert(err.message || "Failed to delete test");
+    }
+  };
+
+  return (
+    <TeacherLayout>
+      <div className="flex-1 flex flex-col min-w-0 bg-void text-chalk">
+        {/* Header */}
+        <div className="border-b border-chalk-faint px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-chalk-muted opacity-60">
+              Assessment Management
+            </p>
+            <h1 className="mt-1 font-display text-2xl sm:text-3xl tracking-tight text-chalk">
+              My Tests
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-chalk-muted">
+              Manage, publish, and monitor your created assessments.
+            </p>
+          </div>
+
+          <Link
+            to="/test-creator/tests/create"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red hover:bg-brand-red-dark px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-chalk transition shadow-sm self-start sm:self-auto"
+          >
+            <PlusIcon size={16} />
+            <span>Create Test</span>
+          </Link>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-7">
+          {error && (
+            <div className="mb-6 rounded-xl border border-brand-red/30 bg-brand-red/10 px-4 py-3 text-sm text-brand-red flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={fetchTests} className="underline text-xs ml-4">
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Loading */}
+          {loading && (
+            <div className="rounded-2xl border border-chalk-faint bg-panel p-12 text-center text-chalk-muted">
+              <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-chalk-muted border-t-brand-red" />
+              <p className="text-sm">Loading your tests…</p>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && tests.length === 0 && (
+            <div className="rounded-2xl border border-chalk-faint bg-panel p-12 text-center max-w-lg mx-auto">
+              <div className="w-12 h-12 mx-auto rounded-xl bg-brand-red-soft text-brand-red flex items-center justify-center mb-3">
+                <TestsIcon size={24} />
+              </div>
+              <h2 className="text-lg font-semibold text-chalk">No tests created yet</h2>
+              <p className="text-sm text-chalk-muted mt-1">
+                Create your first test to make it available to students.
+              </p>
+              <Link
+                to="/test-creator/tests/create"
+                className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red hover:bg-brand-red-dark px-5 py-2.5 text-sm font-semibold text-chalk transition"
+              >
+                <PlusIcon size={16} />
+                <span>Create Test</span>
+              </Link>
+            </div>
+          )}
+
+          {/* Test Cards Grid */}
+          {!loading && tests.length > 0 && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              {tests.map((test) => {
+                const testId = test.id || test._id;
+                const isPaid = Boolean(test.is_paid || test.isPaid);
+                const isPub = Boolean(test.isPublished || test.is_published);
+
+                return (
+                  <div
+                    key={testId}
+                    className="rounded-2xl border border-chalk-faint bg-panel overflow-hidden hover:border-chalk-muted/30 transition flex flex-col justify-between"
+                  >
+                    {/* Top Info */}
+                    <div className="p-5 sm:p-6 border-b border-chalk-faint">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3.5 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-brand-red-soft text-brand-red border border-brand-red/30 flex items-center justify-center shrink-0">
+                            <TestsIcon size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <h2 className="font-semibold text-base text-chalk truncate">
+                              {test.title}
+                            </h2>
+                            <p className="text-xs text-chalk-muted mt-0.5">
+                              {test.subject || "General"}
+                            </p>
+                          </div>
                         </div>
 
-                        <h2 className="text-lg font-semibold text-gray-900 mt-4">
-                            No tests created yet
-                        </h2>
+                        {/* Badges */}
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          {isPaid ? (
+                            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-brand-gold-soft text-brand-gold border border-brand-gold/30">
+                              Paid • ₹{test.price || 499}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-panel-2 text-chalk-muted border border-chalk-faint">
+                              Free
+                            </span>
+                          )}
 
-                        <p className="text-sm text-gray-500 mt-1">
-                            Create your first test to get started.
+                          <span
+                            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                              isPub
+                                ? "bg-success-soft text-success border border-success/30"
+                                : "bg-brand-gold-soft text-brand-gold border border-brand-gold/30"
+                            }`}
+                          >
+                            {isPub ? "Published" : "Draft"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {test.description && (
+                        <p className="text-xs text-chalk-muted/80 mt-3 line-clamp-2 leading-relaxed">
+                          {test.description}
                         </p>
+                      )}
+                    </div>
+
+                    {/* Numerical Stats */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-chalk-faint bg-panel-2/30">
+                      <div className="p-3.5 sm:px-5">
+                        <p className="text-[11px] uppercase tracking-wider text-chalk-muted font-medium">
+                          Questions
+                        </p>
+                        <p className="font-semibold text-sm text-chalk mt-0.5">
+                          {test.totalQuestions ?? 0}
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 sm:px-5 border-l border-chalk-faint">
+                        <p className="text-[11px] uppercase tracking-wider text-chalk-muted font-medium">
+                          Duration
+                        </p>
+                        <p className="font-semibold text-sm text-chalk mt-0.5">
+                          {test.duration} min
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 sm:px-5 border-l border-chalk-faint">
+                        <p className="text-[11px] uppercase tracking-wider text-chalk-muted font-medium">
+                          Marks / Q
+                        </p>
+                        <p className="font-semibold text-sm text-chalk mt-0.5">
+                          {test.marksPerQuestion ?? 1}
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 sm:px-5 border-l border-chalk-faint">
+                        <p className="text-[11px] uppercase tracking-wider text-chalk-muted font-medium">
+                          Negative
+                        </p>
+                        <p className="font-semibold text-sm text-chalk mt-0.5">
+                          {test.negativeMarks ?? 0}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="px-5 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3 bg-panel">
+                      <p className="text-[11px] text-chalk-muted/60">
+                        Created{" "}
+                        {test.createdAt
+                          ? new Date(test.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "—"}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          to={`/test-creator/tests/${testId}/questions`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-red hover:bg-brand-red-dark text-chalk transition"
+                        >
+                          <PlusIcon size={13} />
+                          <span>Questions</span>
+                        </Link>
+
+                        <Link
+                          to={`/test-creator/tests/${testId}/preview`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-panel-2 hover:bg-panel-3 border border-chalk-faint text-chalk transition"
+                        >
+                          <EyeIcon size={13} />
+                          <span>View</span>
+                        </Link>
+
+                        <Link
+                          to={`/test-creator/tests/${testId}/edit`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-panel-2 hover:bg-panel-3 border border-chalk-faint text-chalk transition"
+                        >
+                          <EditIcon size={13} />
+                          <span>Edit</span>
+                        </Link>
 
                         <button
-                            onClick={() => {
-                                window.location.href = "/create-test";
-                            }}
-                            className="mt-5 bg-yellow-400 hover:bg-yellow-500 px-5 py-2.5 rounded-lg font-semibold text-sm"
+                          onClick={() => handlePublishToggle(test)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition ${
+                            isPub
+                              ? "border-brand-gold/40 text-brand-gold hover:bg-brand-gold/10"
+                              : "border-success/40 text-success hover:bg-success/10"
+                          }`}
                         >
-                            Create Test
+                          {isPub ? "Unpublish" : "Publish"}
                         </button>
+
+                        <button
+                          onClick={() => handleDelete(test)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-brand-red/30 text-brand-red hover:bg-brand-red/10 transition"
+                        >
+                          <TrashIcon size={13} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
-                )}
-
-                {/* Test Cards */}
-                {!loading && tests.length > 0 && (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-
-                        {tests.map((test) => (
-                            <div
-                                key={test._id}
-                                className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition"
-                            >
-
-                                {/* Card Header */}
-                                <div className="p-5 border-b border-gray-100">
-                                    <div className="flex items-start justify-between gap-4">
-
-                                        <div className="flex items-start gap-3">
-
-                                            <div className="w-11 h-11 rounded-lg bg-yellow-400 flex items-center justify-center font-bold text-lg shrink-0">
-                                                +
-                                            </div>
-
-                                            <div>
-                                                <h2 className="font-bold text-gray-900 text-lg">
-                                                    {test.title}
-                                                </h2>
-
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    {test.subject || "General"}
-                                                </p>
-                                            </div>
-
-                                        </div>
-
-                                        {/* Status and Pricing Badges */}
-                                        <div className="flex items-center gap-2">
-                                            <span
-                                                className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                                                    test.is_paid || test.isPaid
-                                                        ? "bg-purple-100 text-purple-800 border border-purple-200"
-                                                        : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                                }`}
-                                            >
-                                                {test.is_paid || test.isPaid ? `Paid · ₹${test.price || 499}` : "Free"}
-                                            </span>
-
-                                            <span
-                                                className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                                                    test.isPublished || test.is_published
-                                                        ? "bg-green-100 text-green-700"
-                                                        : "bg-yellow-100 text-yellow-700"
-                                                }`}
-                                            >
-                                                {test.isPublished || test.is_published ? "Published" : "Draft"}
-                                            </span>
-                                        </div>
-
-                                    </div>
-
-                                    {test.description && (
-                                        <p className="text-sm text-gray-600 mt-4 line-clamp-2">
-                                            {test.description}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Test Information */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-gray-100">
-
-                                    <div className="p-4">
-                                        <p className="text-xs text-gray-400">
-                                            Questions
-                                        </p>
-                                        <p className="font-semibold text-gray-900 mt-1">
-                                            {test.totalQuestions ?? 0}
-                                        </p>
-                                    </div>
-
-                                    <div className="p-4 border-l border-gray-100">
-                                        <p className="text-xs text-gray-400">
-                                            Duration
-                                        </p>
-                                        <p className="font-semibold text-gray-900 mt-1">
-                                            {test.duration} min
-                                        </p>
-                                    </div>
-
-                                    <div className="p-4 border-l border-gray-100">
-                                        <p className="text-xs text-gray-400">
-                                            Marks / Q
-                                        </p>
-                                        <p className="font-semibold text-gray-900 mt-1">
-                                            {test.marksPerQuestion}
-                                        </p>
-                                    </div>
-
-                                    <div className="p-4 border-l border-gray-100">
-                                        <p className="text-xs text-gray-400">
-                                            Negative
-                                        </p>
-                                        <p className="font-semibold text-gray-900 mt-1">
-                                            {test.negativeMarks}
-                                        </p>
-                                    </div>
-
-                                </div>
-
-                                {/* Footer */}
-                                <div className="px-5 py-4 flex items-center justify-between">
-
-                                    <p className="text-xs text-gray-400">
-                                        Created{" "}
-                                        {test.createdAt
-                                            ? new Date(test.createdAt).toLocaleDateString()
-                                            : "—"}
-                                    </p>
-
-                                    <div className="flex gap-2">
-
-                                        <button
-                                            onClick={() => {
-                                                window.location.href = `/tests/${test._id}/questions`;
-                                            }}
-                                            className="px-3 py-2 text-sm font-medium bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500"
-                                        >
-                                            Add Questions
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                window.location.href = `/tests/${test._id}/preview`;
-                                            }}
-                                            className="px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
-                                        >
-                                            View
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                window.location.href = `/tests/${test._id}/edit`;
-                                            }}
-                                            className="px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
-                                        >
-                                            Edit
-                                        </button>
-
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    const testId = test.id || test._id;
-                                                    let response = await fetchWithAuth(`/api/tests/${testId}/publish`, {
-                                                        method: "PATCH",
-                                                    });
-                                                    if (!response.ok) {
-                                                        response = await fetchWithAuth(`/api/test-creation/${testId}/publish`, {
-                                                            method: "PATCH",
-                                                        });
-                                                    }
-
-                                                    const data = await response.json();
-
-                                                    if (!response.ok || !data.success) {
-                                                        throw new Error(
-                                                            data.message || "Failed to update test status"
-                                                        );
-                                                    }
-
-                                                    setTests((prevTests) =>
-                                                        prevTests.map((item) =>
-                                                            (item._id === testId || item.id === testId)
-                                                                ? {
-                                                                    ...item,
-                                                                    isPublished: data.test?.isPublished ?? !item.isPublished,
-                                                                    is_published: data.test?.is_published ?? !item.is_published,
-                                                                }
-                                                                : item
-                                                        )
-                                                    );
-                                                } catch (error) {
-                                                    console.error("PUBLISH TEST ERROR:", error);
-                                                    alert(error.message || "Failed to update test status");
-                                                }
-                                            }}
-                                            className={`px-3 py-2 text-sm font-medium rounded-lg ${test.isPublished
-                                                ? "border border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-                                                : "bg-green-600 text-white hover:bg-green-700"
-                                                }`}
-                                        >
-                                            {test.isPublished ? "Unpublish" : "Publish"}
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                const confirmed = window.confirm(
-                                                    `Are you sure you want to delete "${test.title}"?`
-                                                );
-
-                                                if (!confirmed) return;
-
-                                                try {
-                                                    const response = await fetch(
-                                                        `http://localhost:5000/api/test-creation/${test._id}`,
-                                                        {
-                                                            method: "DELETE",
-                                                        }
-                                                    );
-
-                                                    const data = await response.json();
-
-                                                    if (!response.ok || !data.success) {
-                                                        throw new Error(data.message || "Failed to delete test");
-                                                    }
-
-                                                    setTests((prevTests) =>
-                                                        prevTests.filter((item) => item._id !== test._id)
-                                                    );
-                                                } catch (error) {
-                                                    console.error("DELETE TEST ERROR:", error);
-                                                    alert(error.message || "Failed to delete test");
-                                                }
-                                            }}
-                                            className="px-3 py-2 text-sm font-medium border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-
-                                </div>
-
-                            </div>
-                        ))}
-
-                    </div>
-                )}
+                  </div>
+                );
+              })}
             </div>
-        </TeacherLayout>
-    );
+          )}
+        </div>
+      </div>
+    </TeacherLayout>
+  );
 }
 
 export default MyTests;

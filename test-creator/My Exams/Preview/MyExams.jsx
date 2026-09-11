@@ -4,6 +4,7 @@ import AddQuestions from "./AddQuestions";
 import EditExam from "../Edit/EditExam";
 import { useNavigate } from "react-router-dom";
 import TeacherLayout from "../../components/TeacherLayout";
+import { ArrowLeftIcon, RefreshIcon, CheckIcon, CloseIcon, GridSquareIcon, CircleIcon } from "../../components/Icons";
 
 function MyExams() {
   const navigate = useNavigate();
@@ -127,9 +128,10 @@ function MyExams() {
         <div className="fixed top-4 left-4 z-50">
           <button
             onClick={() => setPreviewExamId(null)}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium hover:bg-gray-50"
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium hover:bg-gray-50 inline-flex items-center gap-2"
           >
-            ← Back to My Exams
+            <ArrowLeftIcon size={14} />
+            <span>Back to My Exams</span>
           </button>
         </div>
 
@@ -144,9 +146,10 @@ function MyExams() {
           <button
             type="button"
             onClick={() => setAddQuestionsExamId(null)}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium hover:bg-gray-50"
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium hover:bg-gray-50 inline-flex items-center gap-2"
           >
-            ← Back to My Exams
+            <ArrowLeftIcon size={14} />
+            <span>Back to My Exams</span>
           </button>
         </div>
 
@@ -180,7 +183,8 @@ function MyExams() {
                 onClick={() => setPreviewExamId(null)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#cbd6d1] bg-white text-[#0b5968] text-sm font-semibold hover:bg-[#eef5f2] hover:border-[#0b5968] transition-all duration-200"
               >
-                ← Back to My Exams
+                <ArrowLeftIcon size={14} />
+                <span>Back to My Exams</span>
               </button>
 
             </div>
@@ -204,7 +208,8 @@ function MyExams() {
                 onClick={() => setAddQuestionsExamId(null)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#cbd6d1] bg-white text-[#0b5968] text-sm font-semibold hover:bg-[#eef5f2] hover:border-[#0b5968] transition-all duration-200"
               >
-                ← Back to My Exams
+                <ArrowLeftIcon size={14} />
+                <span>Back to My Exams</span>
               </button>
 
             </div>
@@ -265,8 +270,8 @@ function MyExams() {
                   disabled={loading}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#cbd6d1] bg-white text-[#31544a] text-sm font-semibold hover:bg-[#eef5f2] hover:border-[#9eafa8] disabled:opacity-50 transition-all duration-200"
                 >
-                  <span className={loading ? "animate-spin" : ""}>
-                    ↻
+                  <span className={loading ? "animate-spin inline-flex" : "inline-flex"}>
+                    <RefreshIcon size={16} />
                   </span>
 
                   Refresh
@@ -314,8 +319,8 @@ function MyExams() {
                       </p>
                     </div>
 
-                    <div className="w-10 h-10 rounded-lg bg-[#eaf3f0] text-[#0b5968] flex items-center justify-center text-lg">
-                      ▣
+                    <div className="w-10 h-10 rounded-lg bg-[#eaf3f0] text-[#0b5968] flex items-center justify-center">
+                      <GridSquareIcon size={20} className="text-[#0b5968]" />
                     </div>
 
                   </div>
@@ -342,8 +347,8 @@ function MyExams() {
                       </p>
                     </div>
 
-                    <div className="w-10 h-10 rounded-lg bg-[#edf8f1] text-[#2f7d4b] flex items-center justify-center font-bold">
-                      ✓
+                    <div className="w-10 h-10 rounded-lg bg-[#edf8f1] text-[#2f7d4b] flex items-center justify-center">
+                      <CheckIcon size={20} className="text-[#2f7d4b]" />
                     </div>
 
                   </div>
@@ -370,8 +375,8 @@ function MyExams() {
                       </p>
                     </div>
 
-                    <div className="w-10 h-10 rounded-lg bg-[#fff5d9] text-[#b47700] flex items-center justify-center font-bold">
-                      □
+                    <div className="w-10 h-10 rounded-lg bg-[#fff5d9] text-[#b47700] flex items-center justify-center">
+                      <CircleIcon size={20} className="text-[#b47700]" />
                     </div>
 
                   </div>
@@ -440,11 +445,7 @@ function MyExams() {
                 <div className="p-12 text-center">
 
                   <div className="mx-auto w-16 h-16 rounded-2xl bg-[#eaf3f0] border border-[#cbded6] flex items-center justify-center">
-
-                    <span className="text-2xl text-[#0b5968]">
-                      ▣
-                    </span>
-
+                    <GridSquareIcon size={28} className="text-[#0b5968]" />
                   </div>
 
                   <h2 className="mt-5 text-xl font-bold text-[#0b211a]">
@@ -504,8 +505,8 @@ function MyExams() {
                         <div className="flex gap-4 min-w-0">
 
                           {/* ICON */}
-                          <div className="w-11 h-11 shrink-0 rounded-xl bg-[#eaf3f0] border border-[#cbded6] text-[#0b5968] flex items-center justify-center font-bold text-lg">
-                            ▣
+                          <div className="w-11 h-11 shrink-0 rounded-xl bg-[#eaf3f0] border border-[#cbded6] text-[#0b5968] flex items-center justify-center">
+                            <GridSquareIcon size={22} className="text-[#0b5968]" />
                           </div>
 
 
@@ -741,9 +742,9 @@ function MyExams() {
                     type="button"
                     onClick={() => setDeleteExamId(null)}
                     disabled={deleting}
-                    className="w-9 h-9 rounded-full border border-[#3c5d50] text-[#f4efe3] flex items-center justify-center text-xl hover:bg-[#f5b91e] hover:text-[#071a14] transition disabled:opacity-40"
+                    className="w-9 h-9 rounded-full border border-[#3c5d50] text-[#f4efe3] flex items-center justify-center hover:bg-[#f5b91e] hover:text-[#071a14] transition disabled:opacity-40"
                   >
-                    ×
+                    <CloseIcon size={16} />
                   </button>
 
                 </div>

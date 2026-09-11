@@ -1,1 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Work+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-void: #0F1D17;
+  --color-panel: #152922;
+  --color-panel-2: #1B3229;
+  --color-panel-3: #223B31;
+  --color-chalk: #F2ECDD;
+  --color-chalk-muted: #9BAFA0;
+  --color-chalk-faint: rgba(242, 236, 221, 0.08);
+  --color-brand-red: #E4271C;
+  --color-brand-red-dark: #A81D15;
+  --color-brand-red-soft: rgba(228, 39, 28, 0.16);
+  --color-brand-gold: #F0B429;
+  --color-brand-gold-soft: rgba(240, 180, 41, 0.16);
+  --color-success: #4ADE80;
+  --color-success-soft: rgba(74, 222, 128, 0.14);
+
+  --font-display: Anton, sans-serif;
+  --font-body: "Work Sans", sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: #0F1D17;
+  color: #F2ECDD;
+  font-family: 'Work Sans', sans-serif;
+  margin: 0;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0F1D17;
+}
+::-webkit-scrollbar-thumb {
+  background: #1B3229;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #223B31;
+}

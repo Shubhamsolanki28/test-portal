@@ -1,4 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Work+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-void: #0F1D17;
+  --color-panel: #152922;
+  --color-panel-2: #1B3229;
+  --color-panel-3: #223B31;
+  --color-chalk: #F2ECDD;
+  --color-chalk-muted: #9BAFA0;
+  --color-chalk-faint: rgba(242, 236, 221, 0.08);
+  --color-brand-red: #E4271C;
+  --color-brand-red-dark: #A81D15;
+  --color-brand-red-soft: rgba(228, 39, 28, 0.16);
+  --color-brand-gold: #F0B429;
+  --color-brand-gold-soft: rgba(240, 180, 41, 0.16);
+  --color-success: #4ADE80;
+  --color-success-soft: rgba(74, 222, 128, 0.14);
+
+  --font-display: Anton, sans-serif;
+  --font-body: "Work Sans", sans-serif;
+}
 
 * {
   box-sizing: border-box;
@@ -14,9 +35,9 @@ body,
 
 body {
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #071a14;
-  color: #f4efe3;
+  font-family: 'Work Sans', sans-serif;
+  background: #0F1D17;
+  color: #F2ECDD;
 }
 
 button,
@@ -35,8 +56,8 @@ button:disabled {
 }
 
 ::selection {
-  background: #f5b91e;
-  color: #071a14;
+  background: #F0B429;
+  color: #2C1E04;
 }
 
 ::-webkit-scrollbar {
@@ -45,10 +66,14 @@ button:disabled {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b211a;
+  background: #0F1D17;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #29463b;
-  border-radius: 10px;
+  background: #1B3229;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #223B31;
 }

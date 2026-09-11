@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import TeacherLayout from "../../components/TeacherLayout";
+import { ArrowLeftIcon, SearchIcon, CheckIcon } from "../../components/Icons";
 
 function AddQuestions() {
     const { examId } = useParams();
@@ -211,7 +212,7 @@ function AddQuestions() {
                                         onClick={() => window.history.back()}
                                         className="text-sm text-[#587069] hover:text-[#0b211a] transition"
                                     >
-                                        ← My Exams
+                                        <ArrowLeftIcon size={14} /> My Exams
                                     </button>
 
                                     <span className="text-[#a1aaa6]">
@@ -290,7 +291,7 @@ function AddQuestions() {
                                         </h2>
 
                                         <p className="text-sm text-[#b8c8c1] mt-1">
-                                            {exam.subject || "General"} ·{" "}
+                                            {exam.subject || "General"} &middot;{" "}
                                             {exam.duration || 0} minutes
                                         </p>
 
@@ -341,7 +342,7 @@ function AddQuestions() {
                                 <div className="relative w-full lg:max-w-xl">
 
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#83918b] text-lg">
-                                        ⌕
+                                        <SearchIcon size={18} />
                                     </span>
 
                                     <input
@@ -386,7 +387,7 @@ function AddQuestions() {
                             <div className="mb-5 rounded-xl border border-[#d7dfda] bg-white px-4 py-3 flex items-center gap-3">
 
                                 <div className="w-8 h-8 rounded-lg bg-[#eef5f1] text-[#0b5968] flex items-center justify-center font-bold">
-                                    ✓
+                                    <CheckIcon size={16} />
                                 </div>
 
                                 <p className="text-sm text-[#456057]">
@@ -406,7 +407,7 @@ function AddQuestions() {
                             <div className="bg-white border border-[#dce3df] rounded-2xl p-12 text-center">
 
                                 <div className="mx-auto w-14 h-14 rounded-xl bg-[#eef5f1] text-[#0b5968] flex items-center justify-center text-2xl mb-4">
-                                    ⌕
+                                    <SearchIcon size={24} />
                                 </div>
 
                                 <h2 className="text-lg font-bold text-[#0b211a]">
@@ -472,7 +473,7 @@ function AddQuestions() {
 
                                                                 {alreadyAdded && (
                                                                     <span className="px-2.5 py-1 rounded-full bg-[#e8f4ed] text-[#18734b] text-[11px] font-bold">
-                                                                        ✓ Added
+                                                                        Added
                                                                     </span>
                                                                 )}
 
@@ -569,7 +570,7 @@ function AddQuestions() {
 
                                                             <>
                                                                 <span className="px-3 py-1.5 rounded-full bg-[#e8f4ed] border border-[#b9d6c7] text-[#18734b] text-xs font-bold">
-                                                                    ✓ Added to Exam
+                                                                    Added to Exam
                                                                 </span>
 
                                                                 <button

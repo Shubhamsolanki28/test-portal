@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeftIcon, CloseIcon, CheckIcon, GridSquareIcon } from "../../components/Icons";
 
 function EditQuestion() {
   const { id } = useParams();
@@ -277,7 +278,7 @@ function EditQuestion() {
               onClick={() => navigate("/questions")}
               className="self-start sm:self-auto px-4 py-2.5 rounded-lg border border-[#cbd7d1] bg-white text-[#0b5968] text-sm font-semibold hover:bg-[#f0f5f2] transition"
             >
-              ← Back to Question Bank
+              <ArrowLeftIcon size={14} /> Back to Question Bank
             </button>
 
           </div>
@@ -379,7 +380,7 @@ function EditQuestion() {
                   <div className="flex items-center gap-3">
 
                     <div className="w-9 h-9 rounded-lg bg-[#fff4cf] flex items-center justify-center text-[#946900]">
-                      ▧
+                      <GridSquareIcon size={18} />
                     </div>
 
                     <div>
@@ -419,7 +420,7 @@ function EditQuestion() {
                         className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-[#fff0ed] border border-[#efc8bf] text-[#bd5444] flex items-center justify-center text-xl font-bold shadow-sm hover:bg-[#bd5444] hover:text-white transition"
                         title="Remove image"
                       >
-                        ×
+                        <CloseIcon size={16} />
                       </button>
 
                     </div>
@@ -427,7 +428,7 @@ function EditQuestion() {
                     <div className="rounded-xl border border-dashed border-[#cbd7d1] bg-[#fafbf9] px-6 py-10 text-center">
 
                       <div className="w-12 h-12 mx-auto rounded-xl bg-[#e9f2ee] flex items-center justify-center text-[#0b5968] text-xl">
-                        ▧
+                        <GridSquareIcon size={20} />
                       </div>
 
                       <p className="mt-3 text-sm font-semibold text-[#52635b]">
@@ -564,7 +565,7 @@ function EditQuestion() {
                                 className="w-8 h-8 rounded-lg bg-[#fff0ed] text-[#bd5444] flex items-center justify-center font-bold hover:bg-[#bd5444] hover:text-white transition shrink-0"
                                 title={`Remove option ${letter}`}
                               >
-                                ×
+                                <CloseIcon size={16} />
                               </button>
                             )}
 
@@ -579,7 +580,7 @@ function EditQuestion() {
                   <div className="mt-4 flex items-start gap-2 px-3 py-3 rounded-lg bg-[#f7f9f8] border border-[#e2e8e4]">
 
                     <span className="text-[#0b5968] font-bold">
-                      ✓
+                      <CheckIcon size={16} />
                     </span>
 
                     <p className="text-xs leading-5 text-[#6c7b74]">
@@ -784,7 +785,7 @@ function EditQuestion() {
                 <div className="flex items-center gap-3">
 
                   <div className="w-9 h-9 rounded-lg bg-[#e9f2ee] flex items-center justify-center text-[#0b5968] font-bold">
-                    ✓
+                    <CheckIcon size={18} />
                   </div>
 
                   <div>
@@ -802,15 +803,15 @@ function EditQuestion() {
                 <div className="mt-4 space-y-3">
 
                   <p className="text-xs leading-5 text-[#64736c]">
-                    • Check the question wording.
+                    Check the question wording.
                   </p>
 
                   <p className="text-xs leading-5 text-[#64736c]">
-                    • Make sure the correct option is selected.
+                    Make sure the correct option is selected.
                   </p>
 
                   <p className="text-xs leading-5 text-[#64736c]">
-                    • Verify marks and negative marks.
+                    Verify marks and negative marks.
                   </p>
 
                 </div>

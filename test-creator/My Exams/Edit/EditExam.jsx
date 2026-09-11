@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeftIcon, EditPenIcon, CheckIcon, LockIcon } from "../../components/Icons";
 
 function EditExam() {
   const { examId } = useParams();
@@ -196,9 +197,7 @@ function EditExam() {
             onClick={onBack}
             className="inline-flex items-center gap-2 px-4 py-2.5 mb-5 bg-white border border-[#d6ded9] rounded-lg text-sm font-semibold text-[#0b5968] hover:bg-[#f7faf8] hover:border-[#0b5968] transition"
           >
-            <span className="text-lg leading-none">
-              ←
-            </span>
+            <ArrowLeftIcon size={16} />
 
             Back to My Exams
           </button>
@@ -232,7 +231,7 @@ function EditExam() {
             <div className="flex items-center gap-4">
 
               <div className="w-11 h-11 rounded-xl bg-[#f5b91e] flex items-center justify-center text-[#071a14] text-xl font-bold">
-                ✎
+                <EditPenIcon size={20} />
               </div>
 
               <div>
@@ -429,7 +428,7 @@ function EditExam() {
 
                   <span className="font-bold">
                     {messageType === "success"
-                      ? "✓"
+                      ? <CheckIcon size={14} />
                       : "!"}
                   </span>
 
@@ -467,9 +466,7 @@ function EditExam() {
                 ) : (
                   <>
                     Save Changes
-                    <span className="text-[#f5b91e]">
-                      ✓
-                    </span>
+                    <CheckIcon size={16} className="text-[#f5b91e]" />
                   </>
                 )}
               </button>
@@ -485,7 +482,7 @@ function EditExam() {
         ================================================= */}
 
         <div className="flex items-center justify-center gap-2 mt-5 text-xs text-[#7b8983]">
-          <span>🔒</span>
+          <span><LockIcon size={16} /></span>
           Changes will be saved to your exam.
         </div>
 
