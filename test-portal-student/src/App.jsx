@@ -1,4 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import StudentDashboard from "./components/StudentDashboard.jsx";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  CloseIcon,
+  ClockIcon,
+  AlertTriangleIcon,
+  CalculatorIcon,
+  StarIcon,
+  CircleIcon,
+  MinusIcon,
+  MenuIcon,
+  GridSquareIcon,
+} from "./components/Icons.jsx";
 
 // =====================================================
 // DEFAULT VALUES
@@ -52,6 +67,14 @@ function App() {
   // =====================================================
   // TEST DATA
   // =====================================================
+
+  // View management: "dashboard" or "test"
+  const [currentView, setCurrentView] = useState("dashboard");
+  const [showMobilePalette, setShowMobilePalette] = useState(false);
+  const [showNav, setShowNav] = useState(false);
+  const [allTests, setAllTests] = useState([]);
+  const [purchasedTestIds, setPurchasedTestIds] = useState(new Set());
+  const [completedSubmissions, setCompletedSubmissions] = useState({});
 
   const [publishedTest, setPublishedTest] = useState(null);
   const [loadingTest, setLoadingTest] = useState(true);
@@ -218,46 +241,122 @@ function App() {
         setLoadingTest(true);
         setTestError("");
 
-        const response = await fetch(
-          "http://localhost:5000/api/test-creation/published"
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to fetch published test"
-          );
+        let data = null;
+        try {
+          const response = await fetch("http://localhost:5000/api/tests/published", {
+            headers: { Authorization: "Bearer student" },
+          });
+          if (response.ok) {
+            data = await response.json();
+          }
+        } catch (err) {
+          console.warn("Retrying with legacy endpoint:", err);
         }
 
-        if (!data.tests || data.tests.length === 0) {
-          throw new Error("No published test available.");
+        if (!data || !data.tests || data.tests.length === 0) {
+          const legacyRes = await fetch("http://localhost:5000/api/test-creation/published", {
+            headers: { Authorization: "Bearer student" },
+          });
+          if (legacyRes.ok) {
+            data = await legacyRes.json();
+          }
         }
 
-        // Latest published test
-        setPublishedTest(data.tests[0]);
-
-        console.log(
-          "Published Test:",
-          data.tests[0]
-        );
+        if (data && data.tests && data.tests.length > 0) {
+          setAllTests(data.tests);
+          setPublishedTest(data.tests[0]);
+        } else {
+          setTestError("No published tests available.");
+        }
       } catch (error) {
-        console.error(
-          "FETCH PUBLISHED TEST ERROR:",
-          error
-        );
-
-        setTestError(
-          error.message ||
-          "Failed to load published test."
-        );
+        console.error("FETCH PUBLISHED TEST ERROR:", error);
+        setTestError(error.message || "Failed to load published test.");
       } finally {
         setLoadingTest(false);
       }
     };
 
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/test-submissions/my-submissions", {
+          headers: { Authorization: "Bearer student" },
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.submissions)) {
+          const map = {};
+          data.submissions.forEach((sub) => {
+            const tId = sub.test_id || sub.testId;
+            if (tId) {
+              map[tId] = {
+                percentage: Number(sub.percentage) || 0,
+                obtainedMarks: Number(sub.obtained_marks ?? sub.obtainedMarks) || 0,
+                totalMarks: Number(sub.total_marks ?? sub.totalMarks) || 0,
+                correct: Number(sub.correct) || 0,
+                incorrect: Number(sub.incorrect) || 0,
+                notAnswered: Number(sub.not_answered ?? sub.notAnswered) || 0,
+                totalQuestions: Number(sub.total_questions ?? sub.totalQuestions) || 0,
+                createdAt: sub.created_at || sub.createdAt,
+              };
+            }
+          });
+          setCompletedSubmissions((prev) => ({ ...prev, ...map }));
+        }
+      } catch (err) {
+        console.warn("Could not fetch submission history:", err);
+      }
+    };
+
     fetchPublishedTest();
+    fetchHistory();
   }, []);
+
+  const handleStartTest = (test) => {
+    setPublishedTest(test);
+    setIsSubmitted(false);
+    setTestResult(null);
+    setCurrentQuestion(1);
+    setTemporaryAnswer(null);
+
+    const questionsCount = test.questions?.length || 0;
+    if (questionsCount > 0) {
+      setQuestionStates(
+        Array.from({ length: questionsCount }, () => ({
+          visited: false,
+          savedAnswer: null,
+          review: false,
+        }))
+      );
+    }
+
+    if (test.duration) {
+      setTimeLeft(Number(test.duration) * 60);
+    }
+
+    setCurrentView("test");
+  };
+
+  const handleUnlockTest = async (test) => {
+    const tId = String(test.id || test._id);
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("dexmy_token") || "student";
+      const res = await fetch(`http://localhost:5000/api/tests/${tId}/purchase`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPurchasedTestIds((prev) => new Set([...prev, tId]));
+      } else {
+        alert(data.message || "Server rejected purchase verification.");
+      }
+    } catch (err) {
+      console.warn("Backend purchase call warning, setting locally:", err.message);
+      setPurchasedTestIds((prev) => new Set([...prev, tId]));
+    }
+  };
 
   useEffect(() => {
     if (publishedTest?.duration) {
@@ -698,9 +797,11 @@ function App() {
 
     try {
       const answers = questionStates.map((item, index) => ({
-        questionId: actualQuestions[index]?._id,
+        questionId: actualQuestions[index]?.id || actualQuestions[index]?._id,
         selectedAnswer: item.savedAnswer,
       }));
+
+      const testId = publishedTest?.id || publishedTest?._id;
 
       const response = await fetch(
         "http://localhost:5000/api/test-submissions",
@@ -708,9 +809,10 @@ function App() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": "Bearer student",
           },
           body: JSON.stringify({
-            testId: publishedTest?._id,
+            testId,
             answers,
           }),
         }
@@ -731,6 +833,22 @@ function App() {
       setShowSubmitConfirm(false);
       setIsSubmitted(true);
       setSubmittedTime(timeLeft);
+
+      if (testId) {
+        setCompletedSubmissions((prev) => ({
+          ...prev,
+          [testId]: {
+            percentage: data.result?.percentage || 0,
+            obtainedMarks: data.result?.obtainedMarks || 0,
+            totalMarks: data.result?.totalMarks || 0,
+            correct: data.result?.correct || 0,
+            incorrect: data.result?.incorrect || 0,
+            notAnswered: data.result?.notAnswered || 0,
+            totalQuestions: data.result?.totalQuestions || actualQuestions.length,
+            createdAt: new Date().toISOString(),
+          },
+        }));
+      }
 
     } catch (error) {
       console.error("SUBMIT TEST ERROR:", error);
@@ -797,19 +915,34 @@ function App() {
   // LOADING SCREEN
   // =====================================================
 
+  // If in dashboard view, render Student Dashboard
+  if (currentView === "dashboard") {
+    return (
+      <StudentDashboard
+        tests={allTests.length > 0 ? allTests : (publishedTest ? [publishedTest] : [])}
+        completedSubmissions={completedSubmissions}
+        purchasedTestIds={purchasedTestIds}
+        onStartTest={handleStartTest}
+        onUnlockTest={handleUnlockTest}
+      />
+    );
+  }
+
   if (loadingTest) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#071a14] text-white flex items-center justify-center p-6">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-[#fecaca] border-t-[#e31b23] animate-spin" />
-
-          <h2 className="text-xl font-bold text-[#111827]">
-            Loading Test...
-          </h2>
-
-          <p className="mt-1 text-sm text-[#6b7280]">
-            Please wait while we load your test.
-          </p>
+          <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-[#1b3f32] border-t-[#e31b23] animate-spin" />
+          <h2 className="text-xl font-bold text-white">Loading Test...</h2>
+          <p className="mt-1 text-sm text-[#9eb7ad]">Please wait while we load your test.</p>
+          <button
+            type="button"
+            onClick={() => setCurrentView("dashboard")}
+            className="mt-6 px-4 py-2 rounded-lg bg-[#0e2c22] border border-[#1b3f32] text-xs font-semibold text-[#b8d1c6] hover:text-white hover:bg-[#163e30] transition inline-flex items-center gap-1.5"
+          >
+            <ArrowLeftIcon size={14} />
+            <span>Back to Dashboard</span>
+          </button>
         </div>
       </div>
     );
@@ -826,32 +959,37 @@ function App() {
     publishedTest.questions.length === 0
   ) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="w-full max-w-lg rounded-2xl border border-[#fecaca] bg-[#fffafa] p-8 text-center shadow-sm">
-
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fef2f2] text-2xl text-[#e31b23]">
-            !
+      <div className="min-h-screen bg-[#071a14] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-lg rounded-2xl border border-[#275846] bg-[#0b231b] p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#1b3f32] text-[#f5b91e]">
+            <AlertTriangleIcon size={28} className="text-[#f5b91e]" />
           </div>
 
-          <h1 className="mt-4 text-2xl font-bold text-[#111827]">
+          <h1 className="mt-4 text-2xl font-bold text-white">
             Test Not Available
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-[#6b7280]">
-            {testError ||
-              "There are no questions available in this test yet."}
+          <p className="mt-2 text-sm leading-6 text-[#9eb7ad]">
+            {testError || "There are no questions available in this test yet."}
           </p>
 
-          <button
-            type="button"
-            onClick={() =>
-              window.location.reload()
-            }
-            className="mt-6 rounded-lg bg-[#e31b23] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b91c1c]"
-          >
-            Refresh
-          </button>
-
+          <div className="mt-6 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setCurrentView("dashboard")}
+              className="rounded-lg bg-[#0e2c22] border border-[#275846] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163e30] inline-flex items-center gap-2"
+            >
+              <ArrowLeftIcon size={14} />
+              <span>Back to Dashboard</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-lg bg-[#e31b23] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b91c1c]"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -915,8 +1053,8 @@ function App() {
 
             <div className="mb-7 flex items-center gap-4 rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4">
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e31b23] text-xl text-white">
-                ✓
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e31b23] text-white">
+                <CheckIcon size={20} className="text-white" />
               </div>
 
               <div>
@@ -964,8 +1102,8 @@ function App() {
                         Answered
                       </p>
 
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e31b23] text-sm font-bold text-white">
-                        ✓
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e31b23] text-white">
+                        <CheckIcon size={16} className="text-white" />
                       </span>
 
                     </div>
@@ -986,8 +1124,8 @@ function App() {
                         Correct
                       </p>
 
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16a34a] text-sm font-bold text-white">
-                        ✓
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16a34a] text-white">
+                        <CheckIcon size={16} className="text-white" />
                       </span>
 
                     </div>
@@ -1008,8 +1146,8 @@ function App() {
                         Incorrect
                       </p>
 
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#dc2626] text-sm font-bold text-white">
-                        !
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#dc2626] text-white">
+                        <CloseIcon size={16} className="text-white" />
                       </span>
 
                     </div>
@@ -1030,7 +1168,7 @@ function App() {
                         Percentage
                       </p>
 
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e31b23] text-sm font-bold text-white">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e31b23] text-xs font-bold text-white">
                         %
                       </span>
 
@@ -1064,8 +1202,8 @@ function App() {
                       Answered
                     </p>
 
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e31b23] text-sm font-bold text-white">
-                      ✓
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e31b23] text-white">
+                      <CheckIcon size={16} className="text-white" />
                     </span>
 
                   </div>
@@ -1086,8 +1224,8 @@ function App() {
                       Not Answered
                     </p>
 
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ef4444] text-sm font-bold text-white">
-                      !
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ef4444] text-white">
+                      <AlertTriangleIcon size={16} className="text-white" />
                     </span>
 
                   </div>
@@ -1108,8 +1246,8 @@ function App() {
                       Marked
                     </p>
 
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7c3aed] text-sm font-bold text-white">
-                      ★
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7c3aed] text-white">
+                      <StarIcon size={16} className="text-white" />
                     </span>
 
                   </div>
@@ -1130,8 +1268,8 @@ function App() {
                       Not Viewed
                     </p>
 
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5e7eb] text-sm font-bold text-[#6b7280]">
-                      ○
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5e7eb] text-[#6b7280]">
+                      <CircleIcon size={16} className="text-[#6b7280]" />
                     </span>
 
                   </div>
@@ -1152,8 +1290,8 @@ function App() {
                       Review &amp; Attempted
                     </p>
 
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ea580c] text-sm font-bold text-white">
-                      !
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ea580c] text-white">
+                      <AlertTriangleIcon size={16} className="text-white" />
                     </span>
 
                   </div>
@@ -1185,13 +1323,27 @@ function App() {
 
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowDetailedResult(true)}
-                className="px-5 py-3 rounded-lg bg-[#e31b23] text-white font-bold transition hover:bg-[#c8171e]"
-              >
-                View Results →
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailedResult(false);
+                    setCurrentView("dashboard");
+                  }}
+                  className="px-5 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-bold transition hover:bg-gray-100 inline-flex items-center gap-2"
+                >
+                  <ArrowLeftIcon size={14} />
+                  <span>Return to Dashboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailedResult(true)}
+                  className="px-5 py-3 rounded-lg bg-[#e31b23] text-white font-bold transition hover:bg-[#c8171e] inline-flex items-center gap-2"
+                >
+                  <span>View Results</span>
+                  <ArrowRightIcon size={14} />
+                </button>
+              </div>
 
             </div>
 
@@ -1226,13 +1378,26 @@ function App() {
                   </h1>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowDetailedResult(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-[#e31b23] hover:bg-red-50 hover:text-[#e31b23]"
-                >
-                  ← Back
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDetailedResult(false);
+                      setCurrentView("dashboard");
+                    }}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 inline-flex items-center gap-1.5"
+                  >
+                    <ArrowLeftIcon size={14} />
+                    <span>Dashboard</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailedResult(false)}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-[#e31b23] hover:bg-red-50 hover:text-[#e31b23]"
+                  >
+                    Close Review
+                  </button>
+                </div>
 
               </div>
 
@@ -1275,7 +1440,7 @@ function App() {
                       </p>
 
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-[#e31b23]">
-                        ★
+                        <StarIcon size={18} className="text-[#e31b23]" />
                       </div>
 
                     </div>
@@ -1301,7 +1466,7 @@ function App() {
                       </p>
 
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 text-green-600">
-                        ✓
+                        <CheckIcon size={18} className="text-green-600" />
                       </div>
 
                     </div>
@@ -1324,7 +1489,7 @@ function App() {
                       </p>
 
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600">
-                        ✕
+                        <CloseIcon size={18} className="text-red-600" />
                       </div>
 
                     </div>
@@ -1493,10 +1658,10 @@ function App() {
                               }`}
                           >
                             {answer.isCorrect
-                              ? "✓ Correct"
+                              ? "Correct"
                               : isNotAnswered
                                 ? "Not Answered"
-                                : "✕ Incorrect"}
+                                : "Incorrect"}
                           </span>
 
                         </div>
@@ -1550,7 +1715,7 @@ function App() {
                                   {answer.isCorrect
                                     ? "Correct"
                                     : isNotAnswered
-                                      ? "—"
+                                      ? "N/A"
                                       : "Wrong"}
                                 </span>
 
@@ -1621,9 +1786,10 @@ function App() {
                 <button
                   type="button"
                   onClick={() => setShowDetailedResult(false)}
-                  className="rounded-lg bg-[#e31b23] px-7 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#c8171e]"
+                  className="rounded-lg bg-[#e31b23] px-7 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#c8171e] inline-flex items-center gap-2"
                 >
-                  ← Back to Submission
+                  <ArrowLeftIcon size={14} />
+                  <span>Back to Submission</span>
                 </button>
 
               </div>
@@ -1638,561 +1804,352 @@ function App() {
   }
 
   // =====================================================
-  // MAIN UI
+  // MAIN UI (RESPONSIVE ASSESSMENT ENGINE)
   // =====================================================
+
+  const renderPaletteGrid = (isMobile = false) => (
+    <div className="grid grid-cols-5 gap-2">
+      {actualQuestions.map((_, index) => {
+        const questionNumber = index + 1;
+        const state = questionStates[index];
+        const status = state ? getQuestionStatus(state) : "notViewed";
+        const isCurrent = currentQuestion === questionNumber;
+
+        let buttonClass = "h-9 sm:h-10 rounded-lg flex items-center justify-center text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ";
+
+        if (isCurrent) {
+          buttonClass += "bg-[#e31b23] text-white border border-[#e31b23] shadow-md ring-2 ring-[#e31b23]/30 ";
+        } else if (status === "answered") {
+          buttonClass += "bg-[#e31b23] text-white border border-[#e31b23] hover:bg-[#b91c1c] ";
+        } else if (status === "review") {
+          buttonClass += "bg-[#7c3aed] text-white border border-[#7c3aed] hover:bg-[#6d28d9] ";
+        } else if (status === "reviewAttempted") {
+          buttonClass += "bg-[#ea580c] text-white border border-[#ea580c] hover:bg-[#c2410c] ";
+        } else if (status === "notAnswered") {
+          buttonClass += "bg-[#f3f4f6] text-[#374151] border border-[#e5e7eb] hover:bg-[#fef2f2] hover:text-[#b91c1c] ";
+        } else {
+          buttonClass += "bg-white text-[#374151] border border-[#e5e7eb] hover:bg-[#fef2f2] hover:text-[#b91c1c] ";
+        }
+
+        return (
+          <button
+            key={actualQuestions[index]?._id || questionNumber}
+            onClick={() => {
+              openQuestion(questionNumber);
+              if (isMobile) setShowMobilePalette(false);
+            }}
+            className={buttonClass}
+          >
+            {questionNumber}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const renderPaletteLegend = () => (
+    <div className="shrink-0 border-t border-[#e5e7eb] bg-white px-4 sm:px-5 py-3.5">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#e31b23] mb-2.5">
+        Question Status
+      </p>
+      <div className="space-y-2 text-xs sm:text-[13px]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#e31b23] shadow-sm" />
+            <span className="text-[#374151]">Answered</span>
+          </div>
+          <span className="font-bold text-[#111827]">{counters.answered}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#f3f4f6] border border-[#d1d5db]" />
+            <span className="text-[#374151]">Not Answered</span>
+          </div>
+          <span className="font-bold text-[#111827]">{counters.notAnswered}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#7c3aed]" />
+            <span className="text-[#374151]">Marked for Review</span>
+          </div>
+          <span className="font-bold text-[#111827]">{counters.marked}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-white border border-[#d1d5db]" />
+            <span className="text-[#374151]">Not Viewed</span>
+          </div>
+          <span className="font-bold text-[#111827]">{counters.notViewed}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#ea580c]" />
+            <span className="text-[#374151]">Review &amp; Attempted</span>
+          </div>
+          <span className="font-bold text-[#111827]">{counters.reviewAttempted}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderOptionList = () => (
+    (currentQuestionData.options || []).map((option, index) => {
+      const isSelected = temporaryAnswer === index;
+      const optionLetter = String.fromCharCode(65 + index);
+      const optionText = typeof option === "object"
+        ? option.text || option.option || option.label || ""
+        : option;
+
+      return (
+        <button
+          key={`${currentQuestion}-${index}`}
+          onClick={() => handleAnswer(index)}
+          className={`group w-full min-h-[56px] sm:min-h-[72px] px-4 sm:px-5 py-3 rounded-xl border text-left flex items-center gap-3 sm:gap-4 transition-all duration-200 ${
+            isSelected
+              ? "border-[#e31b23] bg-[#fef2f2] shadow-[0_4px_14px_rgba(227,27,35,0.10)] ring-1 ring-[#e31b23]"
+              : "border-[#e5e7eb] bg-white hover:border-[#e31b23] hover:bg-[#fef2f2] hover:shadow-xs"
+          }`}
+        >
+          <span
+            className={`w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all ${
+              isSelected
+                ? "bg-[#e31b23] text-white shadow-sm"
+                : "bg-[#f3f4f6] text-[#374151] group-hover:bg-[#e31b23] group-hover:text-white"
+            }`}
+          >
+            {optionLetter}
+          </span>
+          <span
+            className={`text-sm sm:text-base leading-snug font-medium transition-colors ${
+              isSelected
+                ? "text-[#991b1b]"
+                : "text-[#374151] group-hover:text-[#991b1b]"
+            }`}
+          >
+            {optionText}
+          </span>
+        </button>
+      );
+    })
+  );
 
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden">
-
       {/* =================================================
-          TOP HEADER
+          TOP HEADER (MOBILE RESPONSIVE)
       ================================================= */}
-
-      <header className="h-20 shrink-0 bg-white border-b border-[#e5e7eb] flex items-center justify-between px-6 shadow-sm">
-
-        {/* LEFT */}
-
-        <div className="min-w-0">
-
-          <h1 className="text-2xl font-bold text-[#111827] tracking-tight">
-            {publishedTest.title}
-          </h1>
-
-          <p className="text-sm text-[#e31b23] mt-0.5">
-            {publishedTest.subject ||
-              "General Awareness"}
-          </p>
-
+      <header className="h-16 sm:h-20 shrink-0 bg-white border-b border-[#e5e7eb] flex items-center justify-between px-3 sm:px-6 shadow-xs z-20">
+        {/* LEFT: BRAND & TEST INFO */}
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <img src="/dexmy.png" alt="Dexmy" className="h-6 sm:h-8 w-auto object-contain shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-lg font-bold text-[#111827] tracking-tight truncate max-w-[130px] sm:max-w-xs md:max-w-md">
+              {publishedTest.title}
+            </h1>
+            <p className="text-[11px] sm:text-xs text-[#e31b23] font-medium truncate hidden xs:block">
+              {publishedTest.subject || "General Awareness"}
+            </p>
+          </div>
         </div>
 
-        {/* RIGHT */}
-
-        <div className="flex items-center gap-3">
-
-          {/* TIMER */}
-
-          <div className="hidden sm:flex items-center gap-2 bg-[#fef2f2] border border-[#fecaca] rounded-lg px-4 py-2.5">
-
-            <span className="text-[#e31b23] text-[16px]">
-              ◷
-            </span>
-
-            <span className="text-sm text-[#4b5563]">
-              Time:
-            </span>
-
+        {/* RIGHT: TIMER, PALETTE TOGGLE, TOOLS & SUBMIT */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          {/* TIMER - ALWAYS VISIBLE */}
+          <div className="flex items-center gap-1.5 bg-[#fef2f2] border border-[#fecaca] rounded-lg px-2.5 sm:px-3.5 py-1.5 sm:py-2">
+            <ClockIcon size={14} className="text-[#e31b23] shrink-0" />
+            <span className="hidden md:inline text-xs text-[#4b5563]">Time:</span>
             <span
-              className={`font-semibold ${timeLeft <= 300
-                ? "text-[#dc2626] animate-pulse"
-                : "text-[#111827]"
-                }`}
+              className={`font-semibold text-xs sm:text-sm ${
+                timeLeft <= 300
+                  ? "text-[#dc2626] animate-pulse"
+                  : "text-[#111827]"
+              }`}
             >
               {formatTime(timeLeft)}
             </span>
-
           </div>
 
-          {/* REPORT */}
-
+          {/* PALETTE TOGGLE BUTTON (MOBILE / TABLET ONLY) */}
           <button
             type="button"
-            onClick={() =>
-              setShowReport(true)
-            }
-            className="px-5 py-2.5 rounded-lg bg-white border border-[#e5e7eb] text-[#374151] font-medium hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#e31b23] transition"
+            onClick={() => setShowMobilePalette(true)}
+            className="lg:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#f9fafb] border border-[#e5e7eb] text-[#374151] hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#e31b23] text-xs font-semibold transition"
+            title="Question Palette"
           >
-            ⚠ Report
+            <GridSquareIcon size={15} />
+            <span className="text-[11px] font-bold">Q: {currentQuestion}/{totalQuestions}</span>
+          </button>
+
+          {/* REPORT (DESKTOP / TABLET) */}
+          <button
+            type="button"
+            onClick={() => setShowReport(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#e5e7eb] text-[#374151] font-medium hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#e31b23] transition text-xs"
+          >
+            <AlertTriangleIcon size={14} />
+            <span className="hidden md:inline">Report</span>
           </button>
 
           {/* CALCULATOR */}
-
           <button
             type="button"
-            onClick={() =>
-              setShowCalculator(true)
-            }
-            className="px-5 py-2.5 rounded-lg bg-white border border-[#e5e7eb] text-[#374151] font-medium hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#e31b23] transition"
+            onClick={() => setShowCalculator(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#e5e7eb] text-[#374151] font-medium hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#e31b23] transition text-xs"
           >
-            ▣ Calculator
+            <CalculatorIcon size={14} />
+            <span className="hidden md:inline">Calculator</span>
           </button>
 
-          {/* SUBMIT */}
-
+          {/* SUBMIT BUTTON */}
           <button
+            type="button"
             onClick={submitExam}
-            className="bg-[#e31b23] hover:bg-[#b91c1c] text-white font-bold px-6 py-2.5 rounded-lg transition shadow-sm"
+            className="bg-[#e31b23] hover:bg-[#b91c1c] text-white font-bold px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm transition shadow-sm"
           >
-            Submit Test
+            Submit
           </button>
-
         </div>
-
       </header>
 
       {/* =================================================
-          MAIN THREE COLUMN LAYOUT
+          MAIN ASSESSMENT CONTAINER (RESPONSIVE)
       ================================================= */}
-
-      <main className="flex-1 min-h-0 flex bg-white text-[#111827]">
+      <main className="flex-1 min-h-0 flex flex-col lg:flex-row bg-white text-[#111827] overflow-hidden relative">
 
         {/* =================================================
-            LEFT QUESTION NAVIGATION
+            1. LEFT QUESTION NAVIGATION (DESKTOP SIDEBAR)
         ================================================= */}
-
-        <aside className="w-[17%] min-w-[260px] bg-white border-r border-[#e5e7eb] flex flex-col min-h-0">
-
-          {/* NAVIGATION HEADER */}
-
-          <div className="shrink-0 px-5 pt-5 pb-4">
-
+        <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 bg-white border-r border-[#e5e7eb] flex-col min-h-0">
+          <div className="shrink-0 px-5 pt-5 pb-3">
             <div className="flex items-center gap-2 mb-1">
-
-              <span className="w-1.5 h-6 rounded-full bg-[#e31b23]" />
-
-              <h2 className="text-[18px] font-bold text-[#111827]">
-                Question Navigation
+              <span className="w-1.5 h-5 rounded-full bg-[#e31b23]" />
+              <h2 className="text-[17px] font-bold text-[#111827]">
+                Question Palette
               </h2>
-
             </div>
-
-            <p className="text-[12px] text-[#6b7280] ml-3.5 mt-1">
-              Navigate through your questions
+            <p className="text-[11px] text-[#6b7280] ml-3.5">
+              Select any question to jump
             </p>
-
-            {/* SECTION DROPDOWN */}
 
             <select
-              className="
-                mt-4 w-full h-11 px-3
-                rounded-xl
-                border border-[#e5e7eb]
-                bg-white
-                text-[14px] font-medium
-                text-[#111827]
-                outline-none
-                cursor-pointer
-                transition-all duration-200
-                hover:border-[#e31b23]
-                focus:border-[#e31b23]
-                focus:ring-2 focus:ring-[#e31b23]/10
-              "
+              className="mt-3 w-full h-10 px-3 rounded-xl border border-[#e5e7eb] bg-white text-xs font-medium text-[#111827] outline-none cursor-pointer transition hover:border-[#e31b23]"
             >
-              <option>
-                {publishedTest.subject ||
-                  "Section 1"}
-              </option>
+              <option>{publishedTest.subject || "Section 1"}</option>
             </select>
-
           </div>
 
-          {/* QUESTION NUMBERS */}
-
-          <div className="flex-1 overflow-y-auto px-5 pb-5">
-
-            <div className="grid grid-cols-5 gap-2.5">
-
-              {actualQuestions.map(
-                (_, index) => {
-
-                  const questionNumber =
-                    index + 1;
-
-                  const state =
-                    questionStates[
-                    index
-                    ];
-
-                  const status = state
-                    ? getQuestionStatus(
-                      state
-                    )
-                    : "notViewed";
-
-                  const isCurrent =
-                    currentQuestion ===
-                    questionNumber;
-
-                  let buttonClass =
-                    "h-10 rounded-lg flex items-center justify-center text-[14px] font-semibold transition-all duration-200 cursor-pointer ";
-
-                  // CURRENT
-
-                  if (isCurrent) {
-                    buttonClass +=
-                      "bg-[#e31b23] text-white border border-[#e31b23] shadow-[0_3px_10px_rgba(227,27,35,0.20)] ring-2 ring-[#e31b23]/20 ";
-                  }
-
-                  // ANSWERED
-
-                  else if (
-                    status ===
-                    "answered"
-                  ) {
-                    buttonClass +=
-                      "bg-[#e31b23] text-white border border-[#e31b23] hover:bg-[#b91c1c] hover:border-[#b91c1c] hover:-translate-y-[1px] ";
-                  }
-
-                  // REVIEW
-
-                  else if (
-                    status === "review"
-                  ) {
-                    buttonClass +=
-                      "bg-[#7c3aed] text-white border border-[#7c3aed] hover:bg-[#6d28d9] hover:-translate-y-[1px] ";
-                  }
-
-                  // REVIEW + ATTEMPTED
-
-                  else if (
-                    status ===
-                    "reviewAttempted"
-                  ) {
-                    buttonClass +=
-                      "bg-[#ea580c] text-white border border-[#ea580c] hover:bg-[#c2410c] hover:-translate-y-[1px] ";
-                  }
-
-                  // NOT ANSWERED
-
-                  else if (
-                    status ===
-                    "notAnswered"
-                  ) {
-                    buttonClass +=
-                      "bg-[#f3f4f6] text-[#374151] border border-[#e5e7eb] hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#b91c1c] ";
-                  }
-
-                  // NOT VIEWED
-
-                  else {
-                    buttonClass +=
-                      "bg-white text-[#374151] border border-[#e5e7eb] hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#b91c1c] ";
-                  }
-
-                  return (
-                    <button
-                      key={
-                        actualQuestions[
-                          index
-                        ]?._id ||
-                        questionNumber
-                      }
-                      onClick={() =>
-                        openQuestion(
-                          questionNumber
-                        )
-                      }
-                      className={
-                        buttonClass
-                      }
-                    >
-                      {questionNumber}
-                    </button>
-                  );
-                }
-              )}
-
-            </div>
-
+          <div className="flex-1 overflow-y-auto px-5 pb-4">
+            {renderPaletteGrid(false)}
           </div>
 
-          {/* =================================================
-              LEGEND
-          ================================================= */}
-
-          <div className="shrink-0 border-t border-[#e5e7eb] bg-white px-5 py-4">
-
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#e31b23] mb-3">
-              Question Status
-            </p>
-
-            <div className="space-y-2.5 text-[13px]">
-
-              {/* ANSWERED */}
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-2.5">
-
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#e31b23] shadow-sm" />
-
-                  <span className="text-[#374151]">
-                    Answered
-                  </span>
-
-                </div>
-
-                <span className="font-bold text-[#111827]">
-                  = {counters.answered}
-                </span>
-
-              </div>
-
-              {/* NOT ANSWERED */}
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-2.5">
-
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#f3f4f6] border border-[#d1d5db]" />
-
-                  <span className="text-[#374151]">
-                    Not Answered
-                  </span>
-
-                </div>
-
-                <span className="font-bold text-[#111827]">
-                  = {counters.notAnswered}
-                </span>
-
-              </div>
-
-              {/* MARKED */}
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-2.5">
-
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#7c3aed]" />
-
-                  <span className="text-[#374151]">
-                    Marked for Review
-                  </span>
-
-                </div>
-
-                <span className="font-bold text-[#111827]">
-                  = {counters.marked}
-                </span>
-
-              </div>
-
-              {/* NOT VIEWED */}
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-2.5">
-
-                  <span className="w-3.5 h-3.5 rounded-full bg-white border border-[#d1d5db]" />
-
-                  <span className="text-[#374151]">
-                    Not Viewed
-                  </span>
-
-                </div>
-
-                <span className="font-bold text-[#111827]">
-                  = {counters.notViewed}
-                </span>
-
-              </div>
-
-              {/* REVIEW & ATTEMPTED */}
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-2.5">
-
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#ea580c]" />
-
-                  <span className="text-[#374151]">
-                    Review &amp; Attempted
-                  </span>
-
-                </div>
-
-                <span className="font-bold text-[#111827]">
-                  ={" "}
-                  {
-                    counters.reviewAttempted
-                  }
-                </span>
-
-              </div>
-
-            </div>
-
-          </div>
-
+          {renderPaletteLegend()}
         </aside>
 
         {/* =================================================
-            CENTER QUESTION AREA
+            2. MOBILE QUESTION NAVIGATION DRAWER / SHEET
         ================================================= */}
-
-        <section className="flex-1 min-w-0 flex flex-col bg-white">
-
-          {/* QUESTION TOP */}
-
-          <div className="shrink-0 px-7 pt-5">
-
-            <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-4">
-
-              <div>
-
-                {/* QUESTION NUMBER */}
-
-                <div className="flex items-center gap-3">
-
-                  <h2 className="text-[23px] font-bold tracking-tight text-[#111827]">
-                    Question{" "}
-                    {currentQuestion}
-                  </h2>
-
-                  <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#6b7280]">
-                    of {totalQuestions}
-                  </span>
-
+        {showMobilePalette && (
+          <div className="fixed inset-0 z-50 flex lg:hidden">
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+              onClick={() => setShowMobilePalette(false)}
+            />
+            <div className="relative z-50 w-80 max-w-[85vw] bg-white h-full flex flex-col shadow-2xl border-r border-[#e5e7eb]">
+              <div className="p-4 border-b border-[#e5e7eb] flex items-center justify-between bg-[#fafafa]">
+                <div className="flex items-center gap-2">
+                  <GridSquareIcon size={18} className="text-[#e31b23]" />
+                  <h3 className="text-sm font-bold text-[#111827]">Question Palette</h3>
                 </div>
-
-                {/* QUESTION META */}
-
-                <div className="flex items-center gap-2 flex-wrap mt-2.5">
-
-                  {/* DIFFICULTY */}
-
-                  <span className="px-3 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] text-[12px] font-bold">
-                    {currentQuestionData.difficulty ||
-                      "Medium"}
-                  </span>
-
-                  {/* TYPE */}
-
-                  <span className="px-3 py-1 rounded-full bg-[#f9fafb] border border-[#e5e7eb] text-[#374151] text-[12px] font-bold">
-                    {currentQuestionData.questionType ||
-                      "MCQ"}
-                  </span>
-
-                  {/* SUBJECT */}
-
-                  <span className="px-3 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] text-[12px] font-bold">
-                    {currentQuestionData.subject ||
-                      publishedTest.subject ||
-                      "General Awareness"}
-                  </span>
-
-                  {/* MARKS */}
-
-                  <span className="px-3 py-1 rounded-full bg-[#f9fafb] border border-[#e5e7eb] text-[#374151] text-[12px] font-bold">
-                    +
-                    {currentQuestionData.marks
-                      ?.correct ??
-                      publishedTest.marksPerQuestion ??
-                      1}{" "}
-                    /{" "}
-                    {currentQuestionData.marks
-                      ?.incorrect ??
-                      publishedTest.negativeMarks ??
-                      0}
-                  </span>
-
-                </div>
-
+                <button
+                  type="button"
+                  onClick={() => setShowMobilePalette(false)}
+                  className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-900 transition"
+                  aria-label="Close palette"
+                >
+                  <CloseIcon size={16} />
+                </button>
               </div>
 
-              {/* LANGUAGE + FONT */}
+              <div className="p-4 flex-1 overflow-y-auto">
+                <p className="text-xs text-gray-500 mb-3 font-medium">Tap any question number to view:</p>
+                {renderPaletteGrid(true)}
+              </div>
 
-              <div className="flex items-center gap-2">
+              {renderPaletteLegend()}
+            </div>
+          </div>
+        )}
 
-                <select
-                  className="
-                    h-9 px-3
-                    rounded-lg
-                    border border-[#e5e7eb]
-                    bg-white
-                    text-[13px] font-medium
-                    text-[#374151]
-                    outline-none
-                    cursor-pointer
-                    hover:border-[#e31b23]
-                    focus:border-[#e31b23]
-                    focus:ring-2 focus:ring-[#e31b23]/10
-                  "
-                >
+        {/* =================================================
+            3. CENTER QUESTION CONTENT AREA
+        ================================================= */}
+        <section className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden min-h-0">
+          {/* QUESTION TOP BAR */}
+          <div className="shrink-0 px-4 sm:px-7 pt-3.5 sm:pt-5">
+            <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-3 sm:pb-4 gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-[#111827]">
+                    Question {currentQuestion}
+                  </h2>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#6b7280]">
+                    of {totalQuestions}
+                  </span>
+                </div>
 
-                  <option>
-                    English
-                  </option>
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mt-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] text-[11px] font-bold">
+                    {currentQuestionData.difficulty || "Medium"}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#f9fafb] border border-[#e5e7eb] text-[#374151] text-[11px] font-bold">
+                    {currentQuestionData.questionType || "MCQ"}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] text-[11px] font-bold">
+                    {currentQuestionData.subject || publishedTest.subject || "General"}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#f9fafb] border border-[#e5e7eb] text-[#374151] text-[11px] font-bold">
+                    +{currentQuestionData.marks?.correct ?? publishedTest.marksPerQuestion ?? 1} / -{currentQuestionData.marks?.incorrect ?? publishedTest.negativeMarks ?? 0}
+                  </span>
+                </div>
+              </div>
 
-                  <option>
-                    Hindi
-                  </option>
-
-                </select>
-
-                <div className="flex h-9 border border-[#e5e7eb] rounded-lg overflow-hidden bg-white">
-
+              {/* FONT ZOOM CONTROLS */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex h-8 sm:h-9 border border-[#e5e7eb] rounded-lg overflow-hidden bg-white">
                   <button
-                    onClick={
-                      decreaseFontSize
-                    }
-                    className="
-                      px-3
-                      text-[13px] font-bold
-                      text-[#374151]
-                      border-r border-[#e5e7eb]
-                      hover:bg-[#fef2f2]
-                      hover:text-[#b91c1c]
-                      transition
-                    "
+                    type="button"
+                    onClick={decreaseFontSize}
+                    className="px-2.5 text-xs font-bold text-[#374151] border-r border-[#e5e7eb] hover:bg-[#fef2f2] hover:text-[#b91c1c] transition inline-flex items-center gap-0.5"
+                    title="Decrease font size"
                   >
-                    A−
+                    <span>A</span><MinusIcon size={10} />
                   </button>
-
                   <button
-                    onClick={
-                      increaseFontSize
-                    }
-                    className="
-                      px-3
-                      text-[13px] font-bold
-                      text-[#374151]
-                      hover:bg-[#fef2f2]
-                      hover:text-[#b91c1c]
-                      transition
-                    "
+                    type="button"
+                    onClick={increaseFontSize}
+                    className="px-2.5 text-xs font-bold text-[#374151] hover:bg-[#fef2f2] hover:text-[#b91c1c] transition"
+                    title="Increase font size"
                   >
                     A+
                   </button>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
 
-          {/* QUESTION CONTENT */}
-
-          <div className="flex-1 overflow-y-auto px-7 py-7">
-
-            <div className="max-w-[900px]">
-
-              {/* QUESTION LABEL */}
-
-              <div className="flex items-center gap-2 mb-3">
-
-                <span className="w-1.5 h-5 rounded-full bg-[#e31b23]" />
-
-                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#6b7280]">
-                  Question
+          {/* QUESTION SCROLLABLE BODY */}
+          <div className="flex-1 overflow-y-auto px-4 sm:px-7 py-4 sm:py-6">
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-1.5 h-4 rounded-full bg-[#e31b23]" />
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] text-[#6b7280]">
+                  Question Statement
                 </span>
-
               </div>
 
-              {/* COMPLETE QUESTION */}
-
               <div
-                className="
-                  text-[#111827]
-                  leading-[1.7]
-                  font-medium
-                  tracking-[-0.01em]
-                "
-                style={{
-                  fontSize: `${questionFontSize}px`,
-                }}
+                className="text-[#111827] leading-relaxed font-medium"
+                style={{ fontSize: `${questionFontSize}px` }}
               >
                 {currentQuestionData?.question ||
                   currentQuestionData?.questionText ||
@@ -2200,282 +2157,97 @@ function App() {
                   "Question not available"}
               </div>
 
-              {/* MEDIA */}
-
               {renderQuestionMedia()}
 
+              {/* MOBILE ONLY: RENDER OPTIONS RIGHT HERE BELOW THE QUESTION */}
+              <div className="lg:hidden mt-6 pt-5 border-t border-[#e5e7eb]">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#e31b23]">
+                    Select Answer
+                  </p>
+                  <span className="text-[11px] text-gray-500 font-medium">Tap to select option</span>
+                </div>
+                <div className="space-y-2.5">
+                  {renderOptionList()}
+                </div>
+              </div>
             </div>
-
           </div>
 
-          {/* BOTTOM ACTION BAR */}
-
-          <div className="shrink-0 border-t border-[#e5e7eb] bg-white px-6 py-4">
-
-            <div className="flex items-center justify-between gap-3">
-
+          {/* BOTTOM ACTION BAR (RESPONSIVE) */}
+          <div className="shrink-0 border-t border-[#e5e7eb] bg-white px-3 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-2">
               {/* PREVIOUS */}
-
               <button
+                type="button"
                 onClick={goPrevious}
-                disabled={
-                  currentQuestion === 1
-                }
-                className="
-                  px-5 py-2.5
-                  rounded-lg
-                  border border-[#e5e7eb]
-                  bg-white
-                  text-[#374151]
-                  font-semibold
-                  text-[14px]
-                  hover:bg-[#fef2f2]
-                  hover:border-[#e31b23]
-                  hover:text-[#b91c1c]
-                  transition-all
-                  disabled:opacity-40
-                  disabled:cursor-not-allowed
-                "
+                disabled={currentQuestion === 1}
+                className="px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] font-semibold text-xs sm:text-sm inline-flex items-center gap-1.5 hover:bg-[#fef2f2] hover:border-[#e31b23] hover:text-[#b91c1c] transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                ← Previous
+                <ArrowLeftIcon size={14} />
+                <span className="hidden xs:inline">Previous</span>
               </button>
 
               {/* CENTER ACTIONS */}
-
-              <div className="flex items-center gap-3">
-
+              <div className="flex items-center gap-1.5 sm:gap-2.5">
                 {/* MARK REVIEW */}
-
                 <button
-                  onClick={
-                    markForReviewAndNext
-                  }
-                  className="
-                    px-5 py-2.5
-                    rounded-lg
-                    border border-[#fecaca]
-                    bg-[#fef2f2]
-                    text-[#b91c1c]
-                    font-semibold
-                    text-[14px]
-                    hover:bg-[#e31b23]
-                    hover:text-white
-                    hover:border-[#e31b23]
-                    hover:-translate-y-[1px]
-                    transition-all
-                  "
+                  type="button"
+                  onClick={markForReviewAndNext}
+                  className="px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-[#fecaca] bg-[#fef2f2] text-[#b91c1c] font-semibold text-xs sm:text-sm hover:bg-[#e31b23] hover:text-white transition"
                 >
-                  {currentState.review
-                    ? "Remove Review & Next"
-                    : "Mark for Review"}
+                  <span className="hidden sm:inline">
+                    {currentState.review ? "Remove Review & Next" : "Mark for Review"}
+                  </span>
+                  <span className="sm:hidden">
+                    {currentState.review ? "Unmark" : "Review"}
+                  </span>
                 </button>
 
                 {/* CLEAR RESPONSE */}
-
                 <button
-                  onClick={
-                    clearResponse
-                  }
-                  className="
-                    px-5 py-2.5
-                    rounded-lg
-                    border border-[#e5e7eb]
-                    bg-white
-                    text-[#374151]
-                    font-semibold
-                    text-[14px]
-                    hover:bg-[#fef2f2]
-                    hover:text-[#b91c1c]
-                    hover:border-[#e31b23]
-                    transition-all
-                  "
+                  type="button"
+                  onClick={clearResponse}
+                  className="px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] font-semibold text-xs sm:text-sm hover:bg-[#fef2f2] hover:text-[#b91c1c] transition"
                 >
-                  Clear Response
+                  Clear
                 </button>
-
               </div>
 
-              {/* SAVE NEXT */}
-
+              {/* SAVE & NEXT */}
               <button
+                type="button"
                 onClick={saveAndNext}
-                className="
-                  px-7 py-2.5
-                  rounded-lg
-                  bg-[#e31b23]
-                  text-white
-                  font-bold
-                  text-[14px]
-                  border border-[#e31b23]
-                  shadow-sm
-                  hover:bg-[#b91c1c]
-                  hover:border-[#b91c1c]
-                  hover:-translate-y-[1px]
-                  hover:shadow-md
-                  transition-all
-                "
+                className="px-3.5 sm:px-7 py-2 sm:py-2.5 rounded-lg bg-[#e31b23] text-white font-bold text-xs sm:text-sm border border-[#e31b23] shadow-sm hover:bg-[#b91c1c] transition inline-flex items-center gap-1.5"
               >
-                Save &amp; Next →
+                <span>Save &amp; Next</span>
+                <ArrowRightIcon size={14} />
               </button>
-
             </div>
-
           </div>
-
         </section>
 
         {/* =================================================
-            RIGHT OPTIONS
+            4. RIGHT OPTIONS PANEL (DESKTOP ONLY)
         ================================================= */}
-
-        <aside
-          className="
-            w-[30%]
-            max-w-[470px]
-            min-w-[300px]
-            border-l border-[#e5e7eb]
-            bg-[#fafafa]
-            flex flex-col
-            min-h-0
-          "
-        >
-
-          {/* OPTIONS HEADER */}
-
-          <div className="shrink-0 px-6 pt-6 pb-3">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#e31b23]">
-                  Select Answer
-                </p>
-
-                <h3 className="mt-1 text-[18px] font-bold text-[#111827]">
-                  Choose the correct option
-                </h3>
-
-              </div>
-
-              <span className="w-9 h-9 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] flex items-center justify-center text-xs font-bold">
-                {currentQuestion}
-              </span>
-
-            </div>
-
+        <aside className="hidden lg:flex w-80 xl:w-96 shrink-0 border-l border-[#e5e7eb] bg-[#fafafa] flex-col min-h-0">
+          <div className="shrink-0 px-6 pt-5 pb-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#e31b23]">
+              Select Answer
+            </p>
+            <h3 className="mt-1 text-base font-bold text-[#111827]">
+              Choose the correct option
+            </h3>
           </div>
-
-          {/* OPTIONS */}
 
           <div className="flex-1 overflow-y-auto px-6 pb-5">
-
             <div className="space-y-3">
-
-              {(
-                currentQuestionData.options ||
-                []
-              ).map(
-                (option, index) => {
-
-                  const isSelected =
-                    temporaryAnswer ===
-                    index;
-
-                  const optionLetter =
-                    String.fromCharCode(
-                      65 + index
-                    );
-
-                  return (
-                    <button
-                      key={`${currentQuestion}-${index}`}
-                      onClick={() =>
-                        handleAnswer(
-                          index
-                        )
-                      }
-                      className={`
-                        group
-                        w-full
-                        min-h-[82px]
-                        px-5
-                        rounded-xl
-                        border
-                        text-left
-                        flex
-                        items-center
-                        gap-4
-                        transition-all
-                        duration-200
-
-                        ${isSelected
-                          ? "border-[#e31b23] bg-[#fef2f2] shadow-[0_4px_14px_rgba(227,27,35,0.10)] ring-1 ring-[#e31b23]"
-                          : "border-[#e5e7eb] bg-white hover:border-[#e31b23] hover:bg-[#fef2f2] hover:-translate-y-[1px] hover:shadow-sm"
-                        }
-                      `}
-                    >
-
-                      {/* OPTION LETTER */}
-
-                      <span
-                        className={`
-                          w-10 h-10
-                          shrink-0
-                          rounded-full
-                          flex
-                          items-center
-                          justify-center
-                          text-[13px]
-                          font-bold
-                          transition-all
-
-                          ${isSelected
-                            ? "bg-[#e31b23] text-white shadow-sm"
-                            : "bg-[#f3f4f6] text-[#374151] group-hover:bg-[#e31b23] group-hover:text-white"
-                          }
-                        `}
-                      >
-                        {optionLetter}
-                      </span>
-
-                      {/* OPTION TEXT */}
-
-                      <span
-                        className={`
-                          text-[16px]
-                          leading-6
-                          font-medium
-                          transition-colors
-
-                          ${isSelected
-                            ? "text-[#991b1b]"
-                            : "text-[#374151] group-hover:text-[#991b1b]"
-                          }
-                        `}
-                      >
-                        {typeof option ===
-                          "object"
-                          ? option.text ||
-                          option.option ||
-                          option.label ||
-                          ""
-                          : option}
-                      </span>
-
-                    </button>
-                  );
-                }
-              )}
-
+              {renderOptionList()}
             </div>
-
           </div>
-
         </aside>
 
       </main>
-
       {/* =====================================================
           REPORT MODAL
       ===================================================== */}
@@ -2511,9 +2283,9 @@ function App() {
                   setReportDescription("");
                   setReportError("");
                 }}
-                className="w-9 h-9 shrink-0 ml-4 rounded-full border border-white/30 text-white flex items-center justify-center text-2xl leading-none hover:bg-white hover:text-[#e31b23] transition-all duration-200"
+                className="w-9 h-9 shrink-0 ml-4 rounded-full border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-[#e31b23] transition-all duration-200"
               >
-                ×
+                <CloseIcon size={16} />
               </button>
 
             </div>
@@ -2684,15 +2456,9 @@ function App() {
               {/* SUCCESS ICON */}
 
               <div className="mx-auto w-16 h-16 rounded-full bg-[#fef2f2] border border-[#fecaca] flex items-center justify-center mb-5">
-
                 <div className="w-10 h-10 rounded-full bg-[#e31b23] flex items-center justify-center">
-
-                  <span className="text-white text-2xl font-bold">
-                    ✓
-                  </span>
-
+                  <CheckIcon size={22} className="text-white" />
                 </div>
-
               </div>
 
               {/* LABEL */}
@@ -2750,8 +2516,8 @@ function App() {
 
               <div className="flex items-center gap-3">
 
-                <div className="w-9 h-9 rounded-lg bg-white text-[#e31b23] flex items-center justify-center font-bold">
-                  ▣
+                <div className="w-9 h-9 rounded-lg bg-white text-[#e31b23] flex items-center justify-center">
+                  <CalculatorIcon size={20} className="text-[#e31b23]" />
                 </div>
 
                 <div>
@@ -2777,9 +2543,9 @@ function App() {
                     false
                   )
                 }
-                className="w-9 h-9 rounded-full border border-white/30 text-white flex items-center justify-center text-2xl leading-none hover:bg-white hover:text-[#e31b23] transition-all duration-200"
+                className="w-9 h-9 rounded-full border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-[#e31b23] transition-all duration-200"
               >
-                ×
+                <CloseIcon size={16} />
               </button>
 
             </div>
